@@ -6,7 +6,7 @@ import IMG3  from '../../assets/img3.jpeg'
 
 const About = () => {
   return (
-    <div className="about-container">
+    <div className="about-container" id="about  ">
       <div className="about-header fade-in">
         <h2>About uDonate</h2>
         <p>The Universal Donation Platform for Everyone, Everywhere</p>
