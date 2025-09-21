@@ -4,6 +4,7 @@ import BODY from './components/body/body'
 import ABOUT from './components/about/about'
 import TESTIMONY from './components/testimony/testimony'
 import CONTACT from './components/contactus/contact'
+import FOOTER from './components/footer/footer'
 function App() {
   
 
@@ -14,6 +15,7 @@ function App() {
       <ABOUT/>
       <TESTIMONY/>
       <CONTACT/>
+     <FOOTER/>
     </>
   )
 }
