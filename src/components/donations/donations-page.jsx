@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FaHeart, FaUsers, FaClock, FaArrowLeft, FaEthereum, FaSearch } from 'react-icons/fa';
 import './donations-page.css';
+import PaymentCheckout from './PaymentCheckout'; // Import the PaymentCheckout component
 
 // Import all category campaigns
 import warCampaigns from './campaigns/war';
@@ -35,23 +36,33 @@ const DonationPage = () => {
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [donationAmount, setDonationAmount] = useState('');
   const [showDonationModal, setShowDonationModal] = useState(false);
+  const [showPaymentCheckout, setShowPaymentCheckout] = useState(false);
 
   const filteredCampaigns = activeCategory === 'all'
     ? allCampaigns
     : allCampaigns.filter(c => c.category === activeCategory);
 
   const openCampaignDetail = (campaign) => setSelectedCampaign(campaign);
+  
   const openDonationModal = (campaign) => {
     setSelectedCampaign(campaign);
     setShowDonationModal(true);
   };
+
   const handleDonate = () => {
-    alert(`Thank you for your donation of $${donationAmount} to ${selectedCampaign.title}!`);
+    // When user clicks "Donate Now" in the simple modal, show the payment checkout
     setShowDonationModal(false);
-    setDonationAmount('');
+    setShowPaymentCheckout(true);
   };
 
-  if (selectedCampaign && !showDonationModal) {
+  const handlePaymentComplete = () => {
+    setShowPaymentCheckout(false);
+    setDonationAmount('');
+    // Show success message or update campaign stats
+    alert(`Thank you for your donation of $${donationAmount} to ${selectedCampaign.title}!`);
+  };
+
+  if (selectedCampaign && !showDonationModal && !showPaymentCheckout) {
     return (
       <CampaignDetail 
         campaign={selectedCampaign} 
@@ -117,7 +128,7 @@ const DonationPage = () => {
                     <FaUsers /> {campaign.donors} donors
                   </div>
                   <div className="meta-item">
-                    <FaClock /> {campaign.daysLeft} days left
+                   
                   </div>
                 </div>
 
@@ -131,6 +142,7 @@ const DonationPage = () => {
         </div>
       </div>
 
+      {/* Simple Donation Modal for Amount Selection */}
       {showDonationModal && selectedCampaign && (
         <DonationModal 
           campaign={selectedCampaign}
@@ -138,6 +150,19 @@ const DonationPage = () => {
           setDonationAmount={setDonationAmount}
           onClose={() => setShowDonationModal(false)}
           onDonate={handleDonate}
+        />
+      )}
+
+      {/* Advanced Payment Checkout System */}
+      {showPaymentCheckout && selectedCampaign && (
+        <PaymentCheckout 
+          campaign={selectedCampaign}
+          donationAmount={donationAmount}
+          onClose={() => {
+            setShowPaymentCheckout(false);
+            setDonationAmount('');
+          }}
+          onPaymentComplete={handlePaymentComplete}
         />
       )}
     </div>
@@ -173,8 +198,7 @@ const CampaignDetail = ({ campaign, onBack, onDonate }) => (
           <div className="stat"><span className="stat-value">${campaign.raised.toLocaleString()}</span><span className="stat-label">Raised</span></div>
           <div className="stat"><span className="stat-value">${campaign.goal.toLocaleString()}</span><span className="stat-label">Goal</span></div>
           <div className="stat"><span className="stat-value">{campaign.donors}</span><span className="stat-label">Donors</span></div>
-          <div className="stat"><span className="stat-value">{campaign.daysLeft}</span><span className="stat-label">Days Left</span></div>
-        </div>
+            </div>
         <div className="progress-container">
           <div className="progress-bar"><div className="progress-fill" style={{ width: `${(campaign.raised / campaign.goal) * 100}%` }}></div></div>
           <div className="progress-text">{((campaign.raised / campaign.goal) * 100).toFixed(1)}% funded</div>
@@ -191,7 +215,7 @@ const CampaignDetail = ({ campaign, onBack, onDonate }) => (
   </div>
 );
 
-// --- Donation Modal ---
+// --- Simple Donation Modal (for amount selection only) ---
 const DonationModal = ({ campaign, donationAmount, setDonationAmount, onClose, onDonate }) => {
   const quickAmounts = [10, 25, 50, 100, 250, 500];
   return (
@@ -210,7 +234,9 @@ const DonationModal = ({ campaign, donationAmount, setDonationAmount, onClose, o
             <div className="amount-input"><span>$</span><input type="number" id="custom-amount" value={donationAmount} onChange={(e) => setDonationAmount(e.target.value)} placeholder="0.00" /></div>
           </div>
         </div>
-        <button className="donate-now-btn" onClick={onDonate} disabled={!donationAmount || donationAmount <= 0}>Donate Now</button>
+        <button className="donate-now-btn" onClick={onDonate} disabled={!donationAmount || donationAmount <= 0}>
+          Proceed to Payment
+        </button>
       </div>
     </div>
   );

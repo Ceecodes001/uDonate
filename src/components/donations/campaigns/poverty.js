@@ -10,7 +10,7 @@ const povertyCampaign = [
       raised: 12500,
       goal: 35000,
       donors: 134,
-      daysLeft: 60,
+       
       cryptoAddress: "0xc42d35Cc6634C0532925a3b844Bc454e4438f44e"
     }
   

@@ -10,7 +10,7 @@ import HEALTH1 from "../../../assets/health/health1.jpeg"
     raised: 8500,
     goal: 25000,
     donors: 97,
-    daysLeft: 30,
+   
     cryptoAddress: "0xa42d35Cc6634C0532925a3b844Bc454e4438f44e"
   }
 ];

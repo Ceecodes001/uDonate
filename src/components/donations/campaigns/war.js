@@ -10,7 +10,7 @@ const warCampaign = [
       raised: 152000,
       goal: 200000,
       donors: 1243,
-      daysLeft: 5,
+      
       cryptoAddress: "0x942d35Cc6634C0532925a3b844Bc454e4438f44e"
     },
   

@@ -10,7 +10,7 @@ const educationCampaign = [
       raised: 37800,
       goal: 75000,
       donors: 512,
-      daysLeft: 42,
+      
       cryptoAddress: "0x842d35Cc6634C0532925a3b844Bc454e4438f44e"
     },
   

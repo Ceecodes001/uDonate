@@ -10,7 +10,7 @@ const orphansCampaign = [
       raised: 89000,
       goal: 150000,
       donors: 678,
-      daysLeft: 22,
+      
       cryptoAddress: "0xb42d35Cc6634C0532925a3b844Bc454e4438f44e"
     },
   
