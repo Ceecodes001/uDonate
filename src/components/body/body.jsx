@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
-import "./body.css";
-import charityVideo from "../../assets/charity-video.mp4"; // Update with actual path
 
-const messages = [
-  {
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // <-- import useNavigate
+import "./body.css";
+import charityVideo from "../../assets/charity-video.mp4";
+
+const messages = [  {
     headline: "Be the Reason Hope Survives",
     subtext: `
       In Gaza, families are trapped without food, medicine, or shelter. In Ukraine,
@@ -103,9 +104,11 @@ const messages = [
     `
   }
 ];
+;
 
 const Body = () => {
   const [index, setIndex] = useState(0);
+  const navigate = useNavigate(); // <-- initialize navigate
 
   // Auto-rotate messages
   useEffect(() => {
@@ -129,10 +132,16 @@ const Body = () => {
       <div key={index} className="text-content fade">
         <h1>{messages[index].headline}</h1>
         <p>{messages[index].subtext}</p>
-        <button className="donate-btn">Donate Now</button>
+        <button 
+          className="donate-btn" 
+          onClick={() => navigate("/donation")} // <-- navigate to donation page
+        >
+          Donate Now
+        </button>
       </div>
     </div>
   );
 };
 
 export default Body;
+
