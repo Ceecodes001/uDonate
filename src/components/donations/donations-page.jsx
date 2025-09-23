@@ -1,5 +1,3 @@
-
-// --- Hardcoded Emergency Relief Campaigns ---
 import React, { useState } from 'react';
 import { FaHeart, FaUsers, FaArrowLeft, FaEthereum, FaSearch } from 'react-icons/fa';
 import './donations-page.css';
@@ -10,9 +8,30 @@ import warCampaigns from './campaigns/war';
 import orphansCampaigns from './campaigns/orphans';
 import povertyCampaigns from './campaigns/poverty';
 import educationCampaigns from './campaigns/education';
+
 import WAR1  from '../../assets/war/gaza1.jpeg';
-import WAR2 from '../../assets/war/gaza2.jpeg'
-import SUDAN1 from '../../assets/sudan1.jpeg'
+import WAR2 from '../../assets/war/gaza2.jpeg';
+import SUDAN1 from '../../assets/sudan1.jpeg';
+import AFGHN1 from '../../assets/hardcoded/afghan1.jpeg';
+import AFGHN2 from '../../assets/hardcoded/afghan2.jpeg';
+import CANCER from '../../assets/hardcoded/cancer.jpeg';
+import CHARLIE from '../../assets/hardcoded/charlie.jpeg';
+import CHILD from '../../assets/hardcoded/child education.jpeg';
+import CIVIL from '../../assets/hardcoded/civil-p.jpeg';
+import WATER from '../../assets/hardcoded/clean water.jpeg';
+import AFRICA from '../../assets/hardcoded/east africa.jpeg';
+import FOOD from '../../assets/hardcoded/food.jpeg';
+import HEALTH from '../../assets/hardcoded/health worker.jpeg';
+import HIV from '../../assets/hardcoded/hiv.jpeg';
+import HUMAN from '../../assets/hardcoded/human-t.jpeg';
+import MIGRANT from '../../assets/hardcoded/migrants.jpeg';
+import MY from '../../assets/hardcoded/Myanmar.jpeg';
+import RARE from '../../assets/hardcoded/rare disease.jpeg';
+import DELIEVERY from '../../assets/hardcoded/support for safe delievery.jpeg';
+import WOMAN from '../../assets/hardcoded/woman-r.jpeg';
+import YEMEN from '../../assets/hardcoded/yemen.jpeg';
+
+
 // --- Hardcoded Emergency Relief Campaigns ---
 const emergencyCampaigns = [
   {
@@ -56,7 +75,7 @@ const emergencyCampaigns = [
     title: 'Hunger Crisis in Afghanistan',
     description: 'Assistance for malnutrition and food insecurity.',
     fullDescription: 'Help vulnerable children and families displaced from poverty and war.',
-    image: 'https://via.placeholder.com/600x400?text=Afghanistan+Hunger',
+    image: AFGHN1,
     category: 'emergency',
     raised: 5300,
     goal: 14000,
@@ -68,7 +87,7 @@ const emergencyCampaigns = [
     title: 'Earthquake Relief in Afghanistan',
     description: 'Urgent clothing, shelter, and medical treatment.',
     fullDescription: 'Clean water, healthcare, and shelter for earthquake victims.',
-    image: 'https://via.placeholder.com/600x400?text=Afghanistan+Earthquake',
+    image: AFGHN2,
     category: 'emergency',
     raised: 4100,
     goal: 12000,
@@ -80,7 +99,7 @@ const emergencyCampaigns = [
     title: 'Aid to Conflict-Affected Households in Myanmar',
     description: 'Support households hit by war and natural disasters.',
     fullDescription: 'Food, shelter, and healthcare for Myanmar’s vulnerable families.',
-    image: 'https://via.placeholder.com/600x400?text=Myanmar+Relief',
+    image: MY,
     category: 'emergency',
     raised: 2800,
     goal: 9000,
@@ -92,7 +111,7 @@ const emergencyCampaigns = [
     title: 'Crisis in Yemen & Syria',
     description: 'Support victims of prolonged wars in Yemen & Syria.',
     fullDescription: 'Food, medicine, and shelter for displaced families amidst destroyed infrastructure.',
-    image: 'https://via.placeholder.com/600x400?text=Yemen+Syria+Relief',
+    image: YEMEN,
     category: 'emergency',
     raised: 7700,
     goal: 20000,
@@ -104,7 +123,7 @@ const emergencyCampaigns = [
     title: 'Climate Crisis & Disasters in East Africa',
     description: 'Relief against drought, food & water scarcity.',
     fullDescription: 'Help families suffering from climate-driven crises in East Africa.',
-    image: 'https://via.placeholder.com/600x400?text=East+Africa+Drought',
+    image: AFRICA,
     category: 'emergency',
     raised: 3500,
     goal: 11000,
@@ -120,7 +139,7 @@ const humanRightsCampaigns = [
     title: "Charlie Kirk's Donation Campaign",
     description: 'Support Erika and her two children after tragic loss.',
     fullDescription: 'This fund provides direct support to Erika and her two children (aged 3 and 1).',
-    image: 'https://via.placeholder.com/600x400?text=Charlie+Kirk+Relief',
+    image: CHARLIE,
     category: 'humanrights',
     raised: 5000,
     goal: 20000,
@@ -132,7 +151,7 @@ const humanRightsCampaigns = [
     title: 'Stop Human Trafficking and Child Labor',
     description: 'Fund rescue operations and survivor rehabilitation.',
     fullDescription: 'Anti-trafficking programs, education campaigns, and survivor support.',
-    image: 'https://via.placeholder.com/600x400?text=Anti+Trafficking',
+    image: HUMAN,
     category: 'humanrights',
     raised: 6800,
     goal: 18000,
@@ -144,7 +163,7 @@ const humanRightsCampaigns = [
     title: 'Women’s Rights',
     description: 'Campaigns against gender-based violence and forced marriages.',
     fullDescription: 'Advocacy and support programs for women facing discrimination and violence.',
-    image: 'https://via.placeholder.com/600x400?text=Women+Rights',
+    image: WOMAN,
     category: 'humanrights',
     raised: 4200,
     goal: 12000,
@@ -156,7 +175,7 @@ const humanRightsCampaigns = [
     title: 'Civilian Protection in Conflict Zones',
     description: 'Support humanitarian corridors and food distribution.',
     fullDescription: 'Provide relief in war-torn areas ensuring safety of civilians.',
-    image: 'https://via.placeholder.com/600x400?text=Civilian+Protection',
+    image: CIVIL,
     category: 'humanrights',
     raised: 3600,
     goal: 10000,
@@ -168,7 +187,7 @@ const humanRightsCampaigns = [
     title: 'Support for Safe Delivery of Aids',
     description: 'Demand safe passage of relief to civilians.',
     fullDescription: 'Ensure humanitarian aid reaches civilians in dangerous zones.',
-    image: 'https://via.placeholder.com/600x400?text=Safe+Aid+Delivery',
+    image: DELIEVERY,
     category: 'humanrights',
     raised: 2500,
     goal: 9000,
@@ -184,7 +203,7 @@ const healthcareCampaigns = [
     title: 'Global Cancer Research & Development Innovation',
     description: 'Support advanced treatments like immunotherapy & CAR-T.',
     fullDescription: 'Funding new treatments to improve survival rates in cancer patients.',
-    image: 'https://via.placeholder.com/600x400?text=Cancer+Research',
+    image: CANCER,
     category: 'healthcare',
     raised: 8500,
     goal: 25000,
@@ -196,7 +215,7 @@ const healthcareCampaigns = [
     title: 'HIV/AIDS Cure Research & Development',
     description: 'Research vaccines and elimination strategies.',
     fullDescription: 'Funding efforts to develop a functional cure for HIV/AIDS.',
-    image: 'https://via.placeholder.com/600x400?text=HIV+Research',
+    image: HIV,
     category: 'healthcare',
     raised: 6700,
     goal: 20000,
@@ -208,7 +227,7 @@ const healthcareCampaigns = [
     title: 'Rare Disease Support Campaign',
     description: 'Support for women & children with deadly rare diseases.',
     fullDescription: 'Funding for treatment of diseases like malaria, TB, Parkinson’s, ALS.',
-    image: 'https://via.placeholder.com/600x400?text=Rare+Diseases',
+    image: RARE,
     category: 'healthcare',
     raised: 4900,
     goal: 15000,
@@ -220,31 +239,20 @@ const healthcareCampaigns = [
     title: 'Health Worker Support & Emergency Medical Aid',
     description: 'Gear, medicines, and support for overwhelmed clinics.',
     fullDescription: 'Especially in Gaza, Sudan, and Afghanistan.',
-    image: 'https://via.placeholder.com/600x400?text=Health+Workers',
+    image: HEALTH,
     category: 'healthcare',
     raised: 4100,
     goal: 12000,
     donors: 150,
     cryptoAddress: '0x99998888777766665555444433332222'
   },
-  {
-    id: 'health5',
-    title: 'Child Protection and Education in Conflict Zones',
-    description: 'Rebuild schools and provide psychological support.',
-    fullDescription: 'Safe spaces and education for children affected by war.',
-    image: 'https://via.placeholder.com/600x400?text=Child+Protection',
-    category: 'healthcare',
-    raised: 3900,
-    goal: 11000,
-    donors: 140,
-    cryptoAddress: '0xAAAABBBBCCCCDDDDEEEEFFFF11112222'
-  },
+ 
   {
     id: 'health6',
     title: 'Clean Water & Sanitation in War Zones',
     description: 'WASH programs in Gaza, Sudan, and remote regions.',
     fullDescription: 'Provide clean water and sanitation in conflict areas.',
-    image: 'https://via.placeholder.com/600x400?text=Clean+Water',
+    image: WATER,
     category: 'healthcare',
     raised: 3300,
     goal: 10000,
@@ -256,7 +264,7 @@ const healthcareCampaigns = [
     title: 'Recovery & Protection for Migrants & Refugees',
     description: 'Support displaced families and refugees fleeing by sea.',
     fullDescription: 'Food, water, and shelter for those in camps lacking necessities.',
-    image: 'https://via.placeholder.com/600x400?text=Refugee+Relief',
+    image: MIGRANT,
     category: 'healthcare',
     raised: 4700,
     goal: 14000,
@@ -268,7 +276,7 @@ const healthcareCampaigns = [
     title: 'Food & Nutrition Aid in Western Africa',
     description: 'Help communities suffering from conflict-driven hunger.',
     fullDescription: 'Emergency nutrition for malnourished children and families.',
-    image: 'https://via.placeholder.com/600x400?text=West+Africa+Food+Aid',
+    image: FOOD,
     category: 'healthcare',
     raised: 5200,
     goal: 16000,
@@ -276,6 +284,7 @@ const healthcareCampaigns = [
     cryptoAddress: '0x33334444555566667777888899990000'
   }
 ];
+
 
 // Combine all campaigns
 const allCampaigns = [
