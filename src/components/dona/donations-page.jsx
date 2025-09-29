@@ -1,7 +1,7 @@
- import React, { useState } from 'react';
-import { FaHeart, FaUsers, FaArrowLeft, FaEthereum, FaSearch, FaBitcoin, FaCopy } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { FaHeart, FaUsers, FaArrowLeft, FaEthereum, FaSearch } from 'react-icons/fa';
 import './donations-page.css';
-import PaymentCheckout from './PaymentCheckout'; // your existing checkout component
+import PaymentCheckout from './PaymentCheckout'; // Import the PaymentCheckout component
 
 // Import remaining category campaigns
 import warCampaigns from './campaigns/war';
@@ -31,30 +31,6 @@ import DELIEVERY from '../../assets/hardcoded/support for safe delievery.jpeg';
 import WOMAN from '../../assets/hardcoded/woman-r.jpeg';
 import YEMEN from '../../assets/hardcoded/yemen.jpeg';
 
-// --- Your new set of crypto addresses (from you) ---
-const CRYPTO_ADDRESSES = {
-  BTC: 'bc1qd0l4rpekuxey4dchuaqt963wuz5djpskj9az06',
-  ETH: '0x2F549207342b44ADF00d25893580b23902f3137B',
-  USDT: '0x2F549207342b44ADF00d25893580b23902f3137B', // USDT-ERC20
-  USDC: '0x2F549207342b44ADF00d25893580b23902f3137B', // USDC-ERC20
-  LTC: 'LYeqNHY5YR258V41SEMN8WmdHHrm76EzkD',
-  DOGE: 'D7whXjWwZzsXqnfZdy3rSkBtvTbyefr4d4',
-  TRX: 'TNyKcnXh9GhANHaCgQyTdnXGmMc72ykQFC',
-  XRP: 'raMJSVpvpi8RY6yqmeAo9VPsAeECz1qvmc'
-};
-
-// --- Charlie Kirk Campaign (Moved to TOP) ---
-const charlieKirkCampaign = {
-  id: 'charlie1',
-  title: "Charlie Kirk's Donation Campaign",
-  description: 'Support Erika and her two children after tragic loss.',
-  fullDescription: 'This fund provides direct support to Erika and her two children (aged 3 and 1) after the tragic loss of Charlie Kirk. Your donations will help cover living expenses, education costs, and provide stability during this difficult time.',
-  image: CHARLIE,
-  category: 'featured',
-  raised: 5000,
-  goal: 20000,
-  donors: 250,
-};
 
 // --- Hardcoded Emergency Relief Campaigns ---
 const emergencyCampaigns = [
@@ -68,6 +44,7 @@ const emergencyCampaigns = [
     raised: 4500,
     goal: 12000,
     donors: 210,
+    cryptoAddress: '0x11111111111111111111111111111111'
   },
   {
     id: 'emergency2',
@@ -79,6 +56,7 @@ const emergencyCampaigns = [
     raised: 3100,
     goal: 10000,
     donors: 98,
+    cryptoAddress: '0x22222222222222222222222222222222'
   },
   {
     id: 'emergency3',
@@ -90,6 +68,7 @@ const emergencyCampaigns = [
     raised: 6200,
     goal: 15000,
     donors: 145,
+    cryptoAddress: '0x33333333333333333333333333333333'
   },
   {
     id: 'emergency4',
@@ -101,6 +80,7 @@ const emergencyCampaigns = [
     raised: 5300,
     goal: 14000,
     donors: 180,
+    cryptoAddress: '0x44444444444444444444444444444444'
   },
   {
     id: 'emergency5',
@@ -112,17 +92,19 @@ const emergencyCampaigns = [
     raised: 4100,
     goal: 12000,
     donors: 135,
+    cryptoAddress: '0x55555555555555555555555555555555'
   },
   {
     id: 'emergency6',
     title: 'Aid to Conflict-Affected Households in Myanmar',
     description: 'Support households hit by war and natural disasters.',
-    fullDescription: 'Food, shelter, and healthcare for Myanmar\'s vulnerable families.',
+    fullDescription: 'Food, shelter, and healthcare for Myanmar’s vulnerable families.',
     image: MY,
     category: 'emergency',
     raised: 2800,
     goal: 9000,
     donors: 90,
+    cryptoAddress: '0x66666666666666666666666666666666'
   },
   {
     id: 'emergency7',
@@ -134,6 +116,7 @@ const emergencyCampaigns = [
     raised: 7700,
     goal: 20000,
     donors: 320,
+    cryptoAddress: '0x77777777777777777777777777777777'
   },
   {
     id: 'emergency8',
@@ -145,11 +128,24 @@ const emergencyCampaigns = [
     raised: 3500,
     goal: 11000,
     donors: 115,
+    cryptoAddress: '0x88888888888888888888888888888888'
   }
 ];
 
 // --- Human Rights & Civilian Safety Campaigns ---
 const humanRightsCampaigns = [
+  {
+    id: 'rights1',
+    title: "Charlie Kirk's Donation Campaign",
+    description: 'Support Erika and her two children after tragic loss.',
+    fullDescription: 'This fund provides direct support to Erika and her two children (aged 3 and 1).',
+    image: CHARLIE,
+    category: 'humanrights',
+    raised: 5000,
+    goal: 20000,
+    donors: 250,
+    cryptoAddress: '0x99999999999999999999999999999999'
+  },
   {
     id: 'rights2',
     title: 'Stop Human Trafficking and Child Labor',
@@ -160,10 +156,11 @@ const humanRightsCampaigns = [
     raised: 6800,
     goal: 18000,
     donors: 290,
+    cryptoAddress: '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
   },
   {
     id: 'rights3',
-    title: 'Women\'s Rights',
+    title: 'Women’s Rights',
     description: 'Campaigns against gender-based violence and forced marriages.',
     fullDescription: 'Advocacy and support programs for women facing discrimination and violence.',
     image: WOMAN,
@@ -171,6 +168,7 @@ const humanRightsCampaigns = [
     raised: 4200,
     goal: 12000,
     donors: 160,
+    cryptoAddress: '0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB'
   },
   {
     id: 'rights4',
@@ -182,6 +180,7 @@ const humanRightsCampaigns = [
     raised: 3600,
     goal: 10000,
     donors: 140,
+    cryptoAddress: '0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC'
   },
   {
     id: 'rights5',
@@ -193,6 +192,7 @@ const humanRightsCampaigns = [
     raised: 2500,
     goal: 9000,
     donors: 100,
+    cryptoAddress: '0xDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD'
   }
 ];
 
@@ -208,6 +208,7 @@ const healthcareCampaigns = [
     raised: 8500,
     goal: 25000,
     donors: 370,
+    cryptoAddress: '0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE'
   },
   {
     id: 'health2',
@@ -219,17 +220,19 @@ const healthcareCampaigns = [
     raised: 6700,
     goal: 20000,
     donors: 280,
+    cryptoAddress: '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'
   },
   {
     id: 'health3',
     title: 'Rare Disease Support Campaign',
     description: 'Support for women & children with deadly rare diseases.',
-    fullDescription: 'Funding for treatment of diseases like malaria, TB, Parkinson\'s, ALS.',
+    fullDescription: 'Funding for treatment of diseases like malaria, TB, Parkinson’s, ALS.',
     image: RARE,
     category: 'healthcare',
     raised: 4900,
     goal: 15000,
     donors: 190,
+    cryptoAddress: '0x11112222333344445555666677778888'
   },
   {
     id: 'health4',
@@ -241,7 +244,9 @@ const healthcareCampaigns = [
     raised: 4100,
     goal: 12000,
     donors: 150,
+    cryptoAddress: '0x99998888777766665555444433332222'
   },
+ 
   {
     id: 'health6',
     title: 'Clean Water & Sanitation in War Zones',
@@ -252,6 +257,7 @@ const healthcareCampaigns = [
     raised: 3300,
     goal: 10000,
     donors: 125,
+    cryptoAddress: '0x12344321123443211234432112344321'
   },
   {
     id: 'health7',
@@ -263,6 +269,7 @@ const healthcareCampaigns = [
     raised: 4700,
     goal: 14000,
     donors: 160,
+    cryptoAddress: '0x22223333444455556666777788889999'
   },
   {
     id: 'health8',
@@ -274,12 +281,13 @@ const healthcareCampaigns = [
     raised: 5200,
     goal: 16000,
     donors: 200,
+    cryptoAddress: '0x33334444555566667777888899990000'
   }
 ];
 
-// Combine all campaigns (Charlie Kirk first, then others)
+
+// Combine all campaigns
 const allCampaigns = [
-  charlieKirkCampaign, // Charlie Kirk campaign at the top
   ...warCampaigns,
   ...orphansCampaigns,
   ...povertyCampaigns,
@@ -289,15 +297,8 @@ const allCampaigns = [
   ...healthcareCampaigns
 ];
 
-// Enrich every campaign with the unified crypto addresses object so every campaign shows the same options
-const enrichedCampaigns = allCampaigns.map((c) => ({
-  ...c,
-  cryptoAddresses: CRYPTO_ADDRESSES
-}));
-
 const categories = [
   { id: 'all', name: 'All Campaigns' },
-  { id: 'featured', name: 'Featured' },
   { id: 'war', name: 'War Victims' },
   { id: 'orphans', name: 'Orphans' },
   { id: 'poverty', name: 'Poverty' },
@@ -306,6 +307,9 @@ const categories = [
   { id: 'humanrights', name: 'Human Rights & Safety' },
   { id: 'healthcare', name: 'Healthcare' }
 ];
+
+// --- rest of your DonationPage component stays unchanged ---
+
 
 const DonationPage = () => {
   const [activeCategory, setActiveCategory] = useState('all');
@@ -316,8 +320,8 @@ const DonationPage = () => {
 
   const filteredCampaigns =
     activeCategory === 'all'
-      ? enrichedCampaigns
-      : enrichedCampaigns.filter((c) => c.category === activeCategory);
+      ? allCampaigns
+      : allCampaigns.filter((c) => c.category === activeCategory);
 
   const openCampaignDetail = (campaign) => setSelectedCampaign(campaign);
 
@@ -457,151 +461,73 @@ const DonationPage = () => {
 };
 
 // --- Campaign Detail Component ---
-const CampaignDetail = ({ campaign, onBack, onDonate }) => {
-  const [copySuccess, setCopySuccess] = useState('');
-
-  const copyAddress = async (tokenKey) => {
-    const addr = campaign.cryptoAddresses && campaign.cryptoAddresses[tokenKey];
-    if (!addr) return;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(addr);
-      } else {
-        // fallback
-        const textArea = document.createElement('textarea');
-        textArea.value = addr;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
-      setCopySuccess(`${tokenKey} address copied!`);
-      setTimeout(() => setCopySuccess(''), 2000);
-    } catch (err) {
-      setCopySuccess('Copy failed — please copy manually.');
-      setTimeout(() => setCopySuccess(''), 2000);
-    }
-  };
-
-  const renderTokenIcon = (key) => {
-    switch (key) {
-      case 'BTC':
-        return <FaBitcoin />;
-      case 'ETH':
-        return <FaEthereum />;
-      case 'USDT':
-      case 'USDC':
-        return <span style={{ fontWeight: 700 }}>{key}</span>;
-      case 'LTC':
-        return <span>Ł</span>;
-      case 'DOGE':
-        return <span>Ð</span>;
-      case 'TRX':
-        return <span>⟲</span>;
-      case 'XRP':
-        return <span>✕</span>;
-      default:
-        return <span>{key}</span>;
-    }
-  };
-
-  return (
-    <div className="campaign-detail">
-      <button className="back-button" onClick={onBack}>
-        <FaArrowLeft /> Back to Campaigns
-      </button>
-      <div className="detail-header">
-        <img src={campaign.image} alt={campaign.title} />
-        <div className="header-content">
-          <h1>{campaign.title}</h1>
-          <p className="category-tag">{campaign.category}</p>
-        </div>
+const CampaignDetail = ({ campaign, onBack, onDonate }) => (
+  <div className="campaign-detail">
+    <button className="back-button" onClick={onBack}>
+      <FaArrowLeft /> Back to Campaigns
+    </button>
+    <div className="detail-header">
+      <img src={campaign.image} alt={campaign.title} />
+      <div className="header-content">
+        <h1>{campaign.title}</h1>
+        <p className="category-tag">{campaign.category}</p>
       </div>
+    </div>
 
-      <div className="detail-content">
-        <div className="main-content">
-          <h2>About the Campaign</h2>
-          <p>{campaign.fullDescription}</p>
-          <h2>Impact of Your Donation</h2>
-          <ul className="impact-list">
-            <li>$10 can provide clean water for one person for a year</li>
-            <li>$25 can supply school materials for a child for one year</li>
-            <li>$50 can provide a family with food for a month</li>
-            <li>$100 can cover emergency medical expenses</li>
-          </ul>
+    <div className="detail-content">
+      <div className="main-content">
+        <h2>About the Campaign</h2>
+        <p>{campaign.fullDescription}</p>
+        <h2>Impact of Your Donation</h2>
+        <ul className="impact-list">
+          <li>$10 can provide clean water for one person for a year</li>
+          <li>$25 can supply school materials for a child for one year</li>
+          <li>$50 can provide a family with food for a month</li>
+          <li>$100 can cover emergency medical expenses</li>
+        </ul>
+      </div>
+      <div className="donation-sidebar">
+        <div className="stats-box">
+          <div className="stat">
+            <span className="stat-value">${campaign.raised.toLocaleString()}</span>
+            <span className="stat-label">Raised</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">${campaign.goal.toLocaleString()}</span>
+            <span className="stat-label">Goal</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">{campaign.donors}</span>
+            <span className="stat-label">Donors</span>
+          </div>
         </div>
-
-        <div className="donation-sidebar">
-          <div className="stats-box">
-            <div className="stat">
-              <span className="stat-value">${campaign.raised.toLocaleString()}</span>
-              <span className="stat-label">Raised</span>
-            </div>
-            <div className="stat">
-              <span className="stat-value">${campaign.goal.toLocaleString()}</span>
-              <span className="stat-label">Goal</span>
-            </div>
-            <div className="stat">
-              <span className="stat-value">{campaign.donors}</span>
-              <span className="stat-label">Donors</span>
-            </div>
+        <div className="progress-container">
+          <div className="progress-bar">
+            <div
+              className="progress-fill"
+              style={{ width: `${(campaign.raised / campaign.goal) * 100}%` }}
+            ></div>
           </div>
-
-          <div className="progress-container">
-            <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: `${(campaign.raised / campaign.goal) * 100}%` }}
-              ></div>
-            </div>
-            <div className="progress-text">
-              {((campaign.raised / campaign.goal) * 100).toFixed(1)}% funded
-            </div>
+          <div className="progress-text">
+            {((campaign.raised / campaign.goal) * 100).toFixed(1)}% funded
           </div>
-
-          <button className="donate-btn large" onClick={onDonate}>
-            <FaHeart /> Donate Now
-          </button>
-
-          <div className="crypto-info">
-            <h3>Cryptocurrency Donations</h3>
-            <p>You can donate using any of the addresses below — click copy to copy the address.</p>
-
-            <div className="crypto-list">
-              {campaign.cryptoAddresses &&
-                Object.keys(campaign.cryptoAddresses).map((key) => (
-                  <div className="crypto-row" key={key}>
-                    <div className="crypto-info-left">
-                      <span className="crypto-icon">{renderTokenIcon(key)}</span>
-                      <div className="crypto-details">
-                        <strong>{key}</strong>
-                        <small className="crypto-address">{campaign.cryptoAddresses[key]}</small>
-                      </div>
-                    </div>
-                    <div className="crypto-actions">
-                      <button
-                        className="copy-btn"
-                        onClick={() => copyAddress(key)}
-                        title={`Copy ${key} address`}
-                      >
-                        <FaCopy />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-            </div>
-
-            <div className="copy-feedback" aria-live="polite">
-              {copySuccess && <span>{copySuccess}</span>}
-            </div>
-
-            <p className="note">Note: These addresses were provided for donation options. Please verify before sending.</p>
+        </div>
+        <button className="donate-btn large" onClick={onDonate}>
+          <FaHeart /> Donate Now
+        </button>
+        <div className="crypto-info">
+          <h3>Cryptocurrency Donations</h3>
+          <p>You can also donate using cryptocurrency:</p>
+          <div className="crypto-address">
+            <FaEthereum />
+            <span>{campaign.cryptoAddress}</span>
           </div>
+          <p className="note">Note: This is a placeholder crypto address for demonstration.</p>
         </div>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 // --- Simple Donation Modal (for amount selection only) ---
 const DonationModal = ({ campaign, donationAmount, setDonationAmount, onClose, onDonate }) => {
