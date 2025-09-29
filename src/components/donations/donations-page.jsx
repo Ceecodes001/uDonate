@@ -48,11 +48,11 @@ const charlieKirkCampaign = {
   id: 'charlie1',
   title: "Charlie Kirk's Donation Campaign",
   description: 'Support Erika and her two children after tragic loss.',
-  fullDescription: 'This fund provides direct support to Erika and her two children (aged 3 and 1) after the tragic loss of Charlie Kirk. Your donations will help cover living expenses, education costs, and provide stability during this difficult time.',
+  fullDescription: 'This fund provides direct support to Erika and her two children (aged 3 and 1) after the tragic loss of Charlie Kirk. Your donations will help cover living expenses, education costs, and provide stability during this difficult time. Our foundation ensures that all funds and support from this campeign goes directly to Erica and her childern directly.',
   image: CHARLIE,
   category: 'featured',
   raised: 5000,
-  goal: 20000,
+  goal: 500000,
   donors: 250,
 };
 
@@ -66,7 +66,7 @@ const emergencyCampaigns = [
     image: WAR1,
     category: 'emergency',
     raised: 4500,
-    goal: 12000,
+    goal: 120000,
     donors: 210,
   },
   {
@@ -77,7 +77,7 @@ const emergencyCampaigns = [
     image: WAR2,
     category: 'emergency',
     raised: 3100,
-    goal: 10000,
+    goal: 200000,
     donors: 98,
   },
   {
@@ -88,7 +88,7 @@ const emergencyCampaigns = [
     image: SUDAN1,
     category: 'emergency',
     raised: 6200,
-    goal: 15000,
+    goal: 450000,
     donors: 145,
   },
   {
@@ -99,7 +99,7 @@ const emergencyCampaigns = [
     image: AFGHN1,
     category: 'emergency',
     raised: 5300,
-    goal: 14000,
+    goal: 1000000,
     donors: 180,
   },
   {
@@ -110,7 +110,7 @@ const emergencyCampaigns = [
     image: AFGHN2,
     category: 'emergency',
     raised: 4100,
-    goal: 12000,
+    goal: 260000,
     donors: 135,
   },
   {
@@ -121,7 +121,7 @@ const emergencyCampaigns = [
     image: MY,
     category: 'emergency',
     raised: 2800,
-    goal: 9000,
+    goal: 250000,
     donors: 90,
   },
   {
@@ -132,7 +132,7 @@ const emergencyCampaigns = [
     image: YEMEN,
     category: 'emergency',
     raised: 7700,
-    goal: 20000,
+    goal: 250000,
     donors: 320,
   },
   {
@@ -143,7 +143,7 @@ const emergencyCampaigns = [
     image: AFRICA,
     category: 'emergency',
     raised: 3500,
-    goal: 11000,
+    goal: 275000,
     donors: 115,
   }
 ];
@@ -158,7 +158,7 @@ const humanRightsCampaigns = [
     image: HUMAN,
     category: 'humanrights',
     raised: 6800,
-    goal: 18000,
+    goal: 280000,
     donors: 290,
   },
   {
@@ -169,7 +169,7 @@ const humanRightsCampaigns = [
     image: WOMAN,
     category: 'humanrights',
     raised: 4200,
-    goal: 12000,
+    goal: 330000,
     donors: 160,
   },
   {
@@ -180,7 +180,7 @@ const humanRightsCampaigns = [
     image: CIVIL,
     category: 'humanrights',
     raised: 3600,
-    goal: 10000,
+    goal: 350000,
     donors: 140,
   },
   {
@@ -191,7 +191,7 @@ const humanRightsCampaigns = [
     image: DELIEVERY,
     category: 'humanrights',
     raised: 2500,
-    goal: 9000,
+    goal: 250000,
     donors: 100,
   }
 ];
@@ -206,7 +206,7 @@ const healthcareCampaigns = [
     image: CANCER,
     category: 'healthcare',
     raised: 8500,
-    goal: 25000,
+    goal: 430000,
     donors: 370,
   },
   {
@@ -217,7 +217,7 @@ const healthcareCampaigns = [
     image: HIV,
     category: 'healthcare',
     raised: 6700,
-    goal: 20000,
+    goal: 900000,
     donors: 280,
   },
   {
@@ -228,7 +228,7 @@ const healthcareCampaigns = [
     image: RARE,
     category: 'healthcare',
     raised: 4900,
-    goal: 15000,
+    goal: 450000,
     donors: 190,
   },
   {
@@ -239,7 +239,7 @@ const healthcareCampaigns = [
     image: HEALTH,
     category: 'healthcare',
     raised: 4100,
-    goal: 12000,
+    goal: 320000,
     donors: 150,
   },
   {
@@ -250,7 +250,7 @@ const healthcareCampaigns = [
     image: WATER,
     category: 'healthcare',
     raised: 3300,
-    goal: 10000,
+    goal: 500000,
     donors: 125,
   },
   {
@@ -261,7 +261,7 @@ const healthcareCampaigns = [
     image: MIGRANT,
     category: 'healthcare',
     raised: 4700,
-    goal: 14000,
+    goal: 325000,
     donors: 160,
   },
   {
@@ -272,7 +272,7 @@ const healthcareCampaigns = [
     image: FOOD,
     category: 'healthcare',
     raised: 5200,
-    goal: 16000,
+    goal: 1000000,
     donors: 200,
   }
 ];
@@ -490,8 +490,9 @@ const CampaignDetail = ({ campaign, onBack, onDonate }) => {
       case 'ETH':
         return <FaEthereum />;
       case 'USDT':
+         return <span>USDT</span>;
       case 'USDC':
-        return <span style={{ fontWeight: 700 }}>{key}</span>;
+        return <span style={{ fontWeight: 500 }}>{key}</span>;
       case 'LTC':
         return <span>Ł</span>;
       case 'DOGE':
@@ -564,32 +565,7 @@ const CampaignDetail = ({ campaign, onBack, onDonate }) => {
           </button>
 
           <div className="crypto-info">
-            <h3>Cryptocurrency Donations</h3>
-            <p>You can donate using any of the addresses below — click copy to copy the address.</p>
-
-            <div className="crypto-list">
-              {campaign.cryptoAddresses &&
-                Object.keys(campaign.cryptoAddresses).map((key) => (
-                  <div className="crypto-row" key={key}>
-                    <div className="crypto-info-left">
-                      <span className="crypto-icon">{renderTokenIcon(key)}</span>
-                      <div className="crypto-details">
-                        <strong>{key}</strong>
-                        <small className="crypto-address">{campaign.cryptoAddresses[key]}</small>
-                      </div>
-                    </div>
-                    <div className="crypto-actions">
-                      <button
-                        className="copy-btn"
-                        onClick={() => copyAddress(key)}
-                        title={`Copy ${key} address`}
-                      >
-                        <FaCopy />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-            </div>
+            
 
             <div className="copy-feedback" aria-live="polite">
               {copySuccess && <span>{copySuccess}</span>}

@@ -8,7 +8,7 @@ const povertyCampaign = [
       image:POOR1,
       category: "poverty",
       raised: 12500,
-      goal: 35000,
+      goal: 350000,
       donors: 134,
        
       cryptoAddress: "0xc42d35Cc6634C0532925a3b844Bc454e4438f44e"

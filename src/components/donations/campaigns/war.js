@@ -8,7 +8,7 @@ const warCampaign = [
       image: WAR1,
       category: "war",
       raised: 152000,
-      goal: 200000,
+      goal: 360000,
       donors: 1243,
       
       cryptoAddress: "0x942d35Cc6634C0532925a3b844Bc454e4438f44e"

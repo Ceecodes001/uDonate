@@ -8,7 +8,7 @@ import HEALTH1 from "../../../assets/health/health1.jpeg"
     image: HEALTH1,
     category: "health",
     raised: 8500,
-    goal: 25000,
+    goal: 250000,
     donors: 97,
    
     cryptoAddress: "0xa42d35Cc6634C0532925a3b844Bc454e4438f44e"

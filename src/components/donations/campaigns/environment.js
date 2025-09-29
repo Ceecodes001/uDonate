@@ -8,7 +8,7 @@ const environmentCampaign = [
     image: WATER1 ,
     category: "environment",
     raised: 12500,
-    goal: 50000,
+    goal: 500000,
     donors: 243,
   
     cryptoAddress: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"

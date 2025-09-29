@@ -8,7 +8,7 @@ const educationCampaign = [
       image: EDUCATION1,
       category: "education",
       raised: 37800,
-      goal: 75000,
+      goal: 750000,
       donors: 512,
       
       cryptoAddress: "0x842d35Cc6634C0532925a3b844Bc454e4438f44e"

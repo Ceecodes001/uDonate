@@ -306,3 +306,6 @@ body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
   .category-badge { top: .8rem; left: .8rem; }
   .campaign-image { height: 160px; }
 }
+span{
+  font-size: 14px;
+}
