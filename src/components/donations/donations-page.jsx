@@ -52,7 +52,7 @@ const charlieKirkCampaign = {
   image: CHARLIE,
   category: 'featured',
   raised: 5000,
-  goal: 500000,
+  goal: 2000000,
   donors: 250,
 };
 
