@@ -1,0 +1,55 @@
+.contact {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+    /* Full height for proper centering */
+  color: green;
+  text-align: center;
+  background: #f9f9f9; /* Light background for contrast */
+  padding: 2em;
+}
+
+.contact h3 {
+  font-size: 2rem;
+  margin-bottom: 1em;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+input {
+  width: 50vw;
+  max-width: 400px; /* Limit so it doesn’t get too big on large screens */
+  height: 3em;
+  margin: 1em 0;
+  padding: 0 1em;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+input:focus {
+  border-color: green;
+}
+
+button {
+  background: green;
+  color: white;
+  border: none;
+  padding: 0.8em 2em;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background: darkgreen;
+}
