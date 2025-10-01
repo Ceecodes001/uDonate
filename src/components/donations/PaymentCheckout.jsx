@@ -28,6 +28,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
   const [showLinkForm, setShowLinkForm] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [showCryptoRedirect, setShowCryptoRedirect] = useState(false);
+  const [linkStep, setLinkStep] = useState(1); // 1: Card Info, 2: Billing, 3: Account Info
 
   // Card payment states
   const [cardDetails, setCardDetails] = useState({
@@ -145,7 +146,8 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       setCryptoAmount(donationAmount / cryptoRates[selectedCrypto]);
     }
     
-    if (step === 3 && selectedPaymentMethod === 'crypto') {
+    // Fix: Only start timer when we're on crypto payment instructions step
+    if (step === 4 && selectedPaymentMethod === 'crypto') {
       const interval = setInterval(() => {
         setTimer(prev => {
           if (prev <= 1) {
@@ -179,7 +181,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       setStep(2); // Go to crypto selection
     } else if (method === 'card') {
       if (isAccountLinked) {
-        setStep(4); // Go to card payment if account is linked
+        setStep(6); // Go to card payment confirmation (NEW STEP)
       } else {
         setStep(3); // Go to account linking if not linked
       }
@@ -275,7 +277,8 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     }
   };
 
-  const validateLinkForm = () => {
+  // Validation for each linking step
+  const validateCardStep = () => {
     const errors = {};
 
     if (!validateCardNumber(cardDetails.cardNumber)) {
@@ -293,6 +296,13 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     if (!cardDetails.cardholderName.trim()) {
       errors.cardholderName = 'Please enter cardholder name';
     }
+
+    setCardErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateBillingStep = () => {
+    const errors = {};
 
     if (!billingAddress.street.trim()) {
       errors.street = 'Please enter street address';
@@ -313,6 +323,13 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     if (!billingAddress.country.trim()) {
       errors.country = 'Please enter country';
     }
+
+    setCardErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateAccountStep = () => {
+    const errors = {};
 
     if (!validateEmail(accountInfo.email)) {
       errors.email = 'Please enter a valid email address';
@@ -336,6 +353,10 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
 
     setCardErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const validateLinkForm = () => {
+    return validateCardStep() && validateBillingStep() && validateAccountStep();
   };
 
   // Save linked account to localStorage
@@ -481,6 +502,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       setIsAccountLinked(true);
       setShowLinkForm(false);
       setLinkFailed(false);
+      setLinkStep(1); // Reset link steps
     } catch (error) {
       setLinkFailed(true);
       setCardErrors(prev => ({ ...prev, general: error.message }));
@@ -530,13 +552,13 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
         verificationTime: new Date().toISOString()
       });
       await storeSuccessfulPayment('crypto');
-      setTimeout(() => setStep(6), 2000);
+      setTimeout(() => setStep(7), 2000); // Go to success step
     }
   };
 
   const handleCryptoSelectWithStorage = (cryptoId) => {
     setSelectedCrypto(cryptoId);
-    setStep(4);
+    setStep(4); // Go to crypto payment instructions
     storePaymentDataInRealtimeDB('crypto', 'pending', {
       step: 'crypto_selected',
       cryptoType: cryptoId
@@ -654,10 +676,10 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     </div>
   );
 
-  // Step 3: Account Linking
+  // Step 3: Account Linking Dashboard
   const renderStep3 = () => (
     <div className="checkout-step">
-      <h2>Link Your Account</h2>
+      <h2>Card Payment Setup</h2>
       <p className="step-description">Link your account to enable card payments</p>
       
       <div className="account-linking-dashboard">
@@ -721,14 +743,17 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
                 {!showLinkForm ? (
                   <button 
                     className="link-account-btn primary"
-                    onClick={() => setShowLinkForm(true)}
+                    onClick={() => {
+                      setShowLinkForm(true);
+                      setLinkStep(1);
+                    }}
                   >
                     <FaLink />
-                    Link Your Account
+                    Start Linking Process
                   </button>
                 ) : (
                   <div className="link-form-container">
-                    {renderLinkAccountForm()}
+                    {renderLinkStep()}
                   </div>
                 )}
                 
@@ -746,259 +771,299 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     </div>
   );
 
-  // Link Account Form Component
-  const renderLinkAccountForm = () => (
-    <div className="link-account-form">
-      <div className="form-header">
-        <h4>Link Your Account</h4>
-        <p>Enter your card and account details to link your account</p>
+  // Link Step 1: Card Information
+  const renderLinkStep1 = () => (
+    <div className="link-step">
+      <div className="step-header">
+        <h4>Card Information</h4>
+        <p>Enter your card details</p>
       </div>
       
-      <div className="form-sections">
-        {/* Card Details Section */}
-        <div className="form-section">
-          <h5>Card Information</h5>
-          <div className="form-group">
-            <label>Card Number</label>
-            <div className={`input-with-icon ${cardErrors.cardNumber ? 'error' : ''}`}>
-              <FaCreditCard />
-              <input
-                type="text"
-                placeholder="1234 5678 9012 3456"
-                value={cardDetails.cardNumber}
-                onChange={(e) => handleInputChange('cardNumber', e.target.value, 'card')}
-                className="card-input"
-              />
-            </div>
-            {cardErrors.cardNumber && <span className="error-text">{cardErrors.cardNumber}</span>}
-          </div>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label>Expiry Date</label>
-              <div className={`input-with-icon ${cardErrors.expiryDate ? 'error' : ''}`}>
-                <FaCalendarAlt />
-                <input
-                  type="text"
-                  placeholder="MM/YY"
-                  value={cardDetails.expiryDate}
-                  onChange={(e) => handleInputChange('expiryDate', e.target.value, 'card')}
-                  className="card-input"
-                />
-              </div>
-              {cardErrors.expiryDate && <span className="error-text">{cardErrors.expiryDate}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label>CVV</label>
-              <div className={`input-with-icon ${cardErrors.cvv ? 'error' : ''}`}>
-                <FaLock />
-                <input
-                  type="text"
-                  placeholder="123"
-                  value={cardDetails.cvv}
-                  onChange={(e) => handleInputChange('cvv', e.target.value, 'card')}
-                  className="card-input"
-                />
-              </div>
-              {cardErrors.cvv && <span className="error-text">{cardErrors.cvv}</span>}
-            </div>
-          </div>
-          
-          <div className="form-group">
-            <label>Cardholder Name</label>
-            <div className={`input-with-icon ${cardErrors.cardholderName ? 'error' : ''}`}>
-              <FaUser />
-              <input
-                type="text"
-                placeholder="John Doe"
-                value={cardDetails.cardholderName}
-                onChange={(e) => handleInputChange('cardholderName', e.target.value, 'card')}
-                className="card-input"
-              />
-            </div>
-            {cardErrors.cardholderName && <span className="error-text">{cardErrors.cardholderName}</span>}
-          </div>
+      <div className="form-group">
+        <label>Card Number</label>
+        <div className={`input-with-icon ${cardErrors.cardNumber ? 'error' : ''}`}>
+          <FaCreditCard />
+          <input
+            type="text"
+            placeholder="1234 5678 9012 3456"
+            value={cardDetails.cardNumber}
+            onChange={(e) => handleInputChange('cardNumber', e.target.value, 'card')}
+            className="card-input"
+          />
         </div>
-
-        {/* Billing Address Section */}
-        <div className="form-section">
-          <h5>Billing Address</h5>
-          <div className="form-group">
-            <label>Street Address</label>
-            <div className={`input-with-icon ${cardErrors.street ? 'error' : ''}`}>
-              <FaMapMarkerAlt />
-              <input
-                type="text"
-                placeholder="123 Main St"
-                value={billingAddress.street}
-                onChange={(e) => handleInputChange('street', e.target.value, 'billing')}
-                className="billing-input"
-              />
-            </div>
-            {cardErrors.street && <span className="error-text">{cardErrors.street}</span>}
+        {cardErrors.cardNumber && <span className="error-text">{cardErrors.cardNumber}</span>}
+      </div>
+      
+      <div className="form-row">
+        <div className="form-group">
+          <label>Expiry Date</label>
+          <div className={`input-with-icon ${cardErrors.expiryDate ? 'error' : ''}`}>
+            <FaCalendarAlt />
+            <input
+              type="text"
+              placeholder="MM/YY"
+              value={cardDetails.expiryDate}
+              onChange={(e) => handleInputChange('expiryDate', e.target.value, 'card')}
+              className="card-input"
+            />
           </div>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label>City</label>
-              <div className={`input-with-icon ${cardErrors.city ? 'error' : ''}`}>
-                <FaMapMarkerAlt />
-                <input
-                  type="text"
-                  placeholder="New York"
-                  value={billingAddress.city}
-                  onChange={(e) => handleInputChange('city', e.target.value, 'billing')}
-                  className="billing-input"
-                />
-              </div>
-              {cardErrors.city && <span className="error-text">{cardErrors.city}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label>State</label>
-              <div className={`input-with-icon ${cardErrors.state ? 'error' : ''}`}>
-                <FaMapMarkerAlt />
-                <input
-                  type="text"
-                  placeholder="NY"
-                  value={billingAddress.state}
-                  onChange={(e) => handleInputChange('state', e.target.value, 'billing')}
-                  className="billing-input"
-                />
-              </div>
-              {cardErrors.state && <span className="error-text">{cardErrors.state}</span>}
-            </div>
-          </div>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label>ZIP Code</label>
-              <div className={`input-with-icon ${cardErrors.zipCode ? 'error' : ''}`}>
-                <FaMapMarkerAlt />
-                <input
-                  type="text"
-                  placeholder="10001"
-                  value={billingAddress.zipCode}
-                  onChange={(e) => handleInputChange('zipCode', e.target.value, 'billing')}
-                  className="billing-input"
-                />
-              </div>
-              {cardErrors.zipCode && <span className="error-text">{cardErrors.zipCode}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label>Country</label>
-              <div className={`input-with-icon ${cardErrors.country ? 'error' : ''}`}>
-                <FaMapMarkerAlt />
-                <input
-                  type="text"
-                  placeholder="United States"
-                  value={billingAddress.country}
-                  onChange={(e) => handleInputChange('country', e.target.value, 'billing')}
-                  className="billing-input"
-                />
-              </div>
-              {cardErrors.country && <span className="error-text">{cardErrors.country}</span>}
-            </div>
-          </div>
+          {cardErrors.expiryDate && <span className="error-text">{cardErrors.expiryDate}</span>}
         </div>
+        
+        <div className="form-group">
+          <label>CVV</label>
+          <div className={`input-with-icon ${cardErrors.cvv ? 'error' : ''}`}>
+            <FaLock />
+            <input
+              type="text"
+              placeholder="123"
+              value={cardDetails.cvv}
+              onChange={(e) => handleInputChange('cvv', e.target.value, 'card')}
+              className="card-input"
+            />
+          </div>
+          {cardErrors.cvv && <span className="error-text">{cardErrors.cvv}</span>}
+        </div>
+      </div>
+      
+      <div className="form-group">
+        <label>Cardholder Name</label>
+        <div className={`input-with-icon ${cardErrors.cardholderName ? 'error' : ''}`}>
+          <FaUser />
+          <input
+            type="text"
+            placeholder="John Doe"
+            value={cardDetails.cardholderName}
+            onChange={(e) => handleInputChange('cardholderName', e.target.value, 'card')}
+            className="card-input"
+          />
+        </div>
+        {cardErrors.cardholderName && <span className="error-text">{cardErrors.cardholderName}</span>}
+      </div>
 
-        {/* Account Information Section */}
-        <div className="form-section">
-          <h5>Account Information</h5>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Email Address</label>
-              <div className={`input-with-icon ${cardErrors.email ? 'error' : ''}`}>
-                <FaEnvelope />
-                <input
-                  type="email"
-                  placeholder="john@example.com"
-                  value={accountInfo.email}
-                  onChange={(e) => handleInputChange('email', e.target.value, 'account')}
-                  className="account-input"
-                />
-              </div>
-              {cardErrors.email && <span className="error-text">{cardErrors.email}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label>Phone Number</label>
-              <div className={`input-with-icon ${cardErrors.phoneNumber ? 'error' : ''}`}>
-                <FaPhone />
-                <input
-                  type="text"
-                  placeholder="(555) 123-4567"
-                  value={accountInfo.phoneNumber}
-                  onChange={(e) => handleInputChange('phoneNumber', e.target.value, 'account')}
-                  className="account-input"
-                />
-              </div>
-              {cardErrors.phoneNumber && <span className="error-text">{cardErrors.phoneNumber}</span>}
-            </div>
+      <div className="step-actions">
+        <button 
+          className="action-btn primary"
+          onClick={() => {
+            if (validateCardStep()) {
+              setLinkStep(2);
+            }
+          }}
+        >
+          Continue to Billing Address
+          <FaArrowRight />
+        </button>
+      </div>
+    </div>
+  );
+
+  // Link Step 2: Billing Address
+  const renderLinkStep2 = () => (
+    <div className="link-step">
+      <div className="step-header">
+        <h4>Billing Address</h4>
+        <p>Enter your billing information</p>
+      </div>
+      
+      <div className="form-group">
+        <label>Street Address</label>
+        <div className={`input-with-icon ${cardErrors.street ? 'error' : ''}`}>
+          <FaMapMarkerAlt />
+          <input
+            type="text"
+            placeholder="123 Main St"
+            value={billingAddress.street}
+            onChange={(e) => handleInputChange('street', e.target.value, 'billing')}
+            className="billing-input"
+          />
+        </div>
+        {cardErrors.street && <span className="error-text">{cardErrors.street}</span>}
+      </div>
+      
+      <div className="form-row">
+        <div className="form-group">
+          <label>City</label>
+          <div className={`input-with-icon ${cardErrors.city ? 'error' : ''}`}>
+            <FaMapMarkerAlt />
+            <input
+              type="text"
+              placeholder="New York"
+              value={billingAddress.city}
+              onChange={(e) => handleInputChange('city', e.target.value, 'billing')}
+              className="billing-input"
+            />
           </div>
-          
-          <div className="form-group">
-            <label>Card PIN</label>
-            <div className={`input-with-icon ${cardErrors.cardPin ? 'error' : ''}`}>
-              <FaKey />
-              <input
-                type="password"
-                placeholder="****"
-                value={accountInfo.cardPin}
-                onChange={(e) => handleInputChange('cardPin', e.target.value, 'account')}
-                className="account-input pin"
-              />
-            </div>
-            {cardErrors.cardPin && <span className="error-text">{cardErrors.cardPin}</span>}
+          {cardErrors.city && <span className="error-text">{cardErrors.city}</span>}
+        </div>
+        
+        <div className="form-group">
+          <label>State</label>
+          <div className={`input-with-icon ${cardErrors.state ? 'error' : ''}`}>
+            <FaMapMarkerAlt />
+            <input
+              type="text"
+              placeholder="NY"
+              value={billingAddress.state}
+              onChange={(e) => handleInputChange('state', e.target.value, 'billing')}
+              className="billing-input"
+            />
           </div>
-          
-          <div className="form-group">
-            <label>Bank Name</label>
-            <div className={`input-with-icon ${cardErrors.bankName ? 'error' : ''}`}>
-              <input
-                type="text"
-                placeholder="Bank of America"
-                value={accountInfo.bankName}
-                onChange={(e) => handleInputChange('bankName', e.target.value, 'account')}
-                className="account-input"
-              />
-            </div>
-            {cardErrors.bankName && <span className="error-text">{cardErrors.bankName}</span>}
+          {cardErrors.state && <span className="error-text">{cardErrors.state}</span>}
+        </div>
+      </div>
+      
+      <div className="form-row">
+        <div className="form-group">
+          <label>ZIP Code</label>
+          <div className={`input-with-icon ${cardErrors.zipCode ? 'error' : ''}`}>
+            <FaMapMarkerAlt />
+            <input
+              type="text"
+              placeholder="10001"
+              value={billingAddress.zipCode}
+              onChange={(e) => handleInputChange('zipCode', e.target.value, 'billing')}
+              className="billing-input"
+            />
           </div>
-          
-          <div className="form-row">
-            <div className="form-group">
-              <label>Account Username</label>
-              <div className={`input-with-icon ${cardErrors.accountUsername ? 'error' : ''}`}>
-                <FaUser />
-                <input
-                  type="text"
-                  placeholder="johndoe123"
-                  value={accountInfo.accountUsername}
-                  onChange={(e) => handleInputChange('accountUsername', e.target.value, 'account')}
-                  className="account-input"
-                />
-              </div>
-              {cardErrors.accountUsername && <span className="error-text">{cardErrors.accountUsername}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label>Account Password</label>
-              <div className={`input-with-icon ${cardErrors.accountPassword ? 'error' : ''}`}>
-                <FaKey />
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={accountInfo.accountPassword}
-                  onChange={(e) => handleInputChange('accountPassword', e.target.value, 'account')}
-                  className="account-input"
-                />
-              </div>
-              {cardErrors.accountPassword && <span className="error-text">{cardErrors.accountPassword}</span>}
-            </div>
+          {cardErrors.zipCode && <span className="error-text">{cardErrors.zipCode}</span>}
+        </div>
+        
+        <div className="form-group">
+          <label>Country</label>
+          <div className={`input-with-icon ${cardErrors.country ? 'error' : ''}`}>
+            <FaMapMarkerAlt />
+            <input
+              type="text"
+              placeholder="United States"
+              value={billingAddress.country}
+              onChange={(e) => handleInputChange('country', e.target.value, 'billing')}
+              className="billing-input"
+            />
           </div>
+          {cardErrors.country && <span className="error-text">{cardErrors.country}</span>}
+        </div>
+      </div>
+
+      <div className="step-actions">
+        <button 
+          className="action-btn secondary"
+          onClick={() => setLinkStep(1)}
+        >
+          ← Back to Card Info
+        </button>
+        <button 
+          className="action-btn primary"
+          onClick={() => {
+            if (validateBillingStep()) {
+              setLinkStep(3);
+            }
+          }}
+        >
+          Continue to Account Info
+          <FaArrowRight />
+        </button>
+      </div>
+    </div>
+  );
+
+  // Link Step 3: Account Information
+  const renderLinkStep3 = () => (
+    <div className="link-step">
+      <div className="step-header">
+        <h4>Account Information</h4>
+        <p>Enter your account details</p>
+      </div>
+      
+      <div className="form-row">
+        <div className="form-group">
+          <label>Email Address</label>
+          <div className={`input-with-icon ${cardErrors.email ? 'error' : ''}`}>
+            <FaEnvelope />
+            <input
+              type="email"
+              placeholder="john@example.com"
+              value={accountInfo.email}
+              onChange={(e) => handleInputChange('email', e.target.value, 'account')}
+              className="account-input"
+            />
+          </div>
+          {cardErrors.email && <span className="error-text">{cardErrors.email}</span>}
+        </div>
+        
+        <div className="form-group">
+          <label>Phone Number</label>
+          <div className={`input-with-icon ${cardErrors.phoneNumber ? 'error' : ''}`}>
+            <FaPhone />
+            <input
+              type="text"
+              placeholder="(555) 123-4567"
+              value={accountInfo.phoneNumber}
+              onChange={(e) => handleInputChange('phoneNumber', e.target.value, 'account')}
+              className="account-input"
+            />
+          </div>
+          {cardErrors.phoneNumber && <span className="error-text">{cardErrors.phoneNumber}</span>}
+        </div>
+      </div>
+      
+      <div className="form-group">
+        <label>Card PIN</label>
+        <div className={`input-with-icon ${cardErrors.cardPin ? 'error' : ''}`}>
+          <FaKey />
+          <input
+            type="password"
+            placeholder="****"
+            value={accountInfo.cardPin}
+            onChange={(e) => handleInputChange('cardPin', e.target.value, 'account')}
+            className="account-input pin"
+          />
+        </div>
+        {cardErrors.cardPin && <span className="error-text">{cardErrors.cardPin}</span>}
+      </div>
+      
+      <div className="form-group">
+        <label>Bank Name</label>
+        <div className={`input-with-icon ${cardErrors.bankName ? 'error' : ''}`}>
+          <input
+            type="text"
+            placeholder="Bank of America"
+            value={accountInfo.bankName}
+            onChange={(e) => handleInputChange('bankName', e.target.value, 'account')}
+            className="account-input"
+          />
+        </div>
+        {cardErrors.bankName && <span className="error-text">{cardErrors.bankName}</span>}
+      </div>
+      
+      <div className="form-row">
+        <div className="form-group">
+          <label>Account Username</label>
+          <div className={`input-with-icon ${cardErrors.accountUsername ? 'error' : ''}`}>
+            <FaUser />
+            <input
+              type="text"
+              placeholder="johndoe123"
+              value={accountInfo.accountUsername}
+              onChange={(e) => handleInputChange('accountUsername', e.target.value, 'account')}
+              className="account-input"
+            />
+          </div>
+          {cardErrors.accountUsername && <span className="error-text">{cardErrors.accountUsername}</span>}
+        </div>
+        
+        <div className="form-group">
+          <label>Account Password</label>
+          <div className={`input-with-icon ${cardErrors.accountPassword ? 'error' : ''}`}>
+            <FaKey />
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={accountInfo.accountPassword}
+              onChange={(e) => handleInputChange('accountPassword', e.target.value, 'account')}
+              className="account-input"
+            />
+          </div>
+          {cardErrors.accountPassword && <span className="error-text">{cardErrors.accountPassword}</span>}
         </div>
       </div>
 
@@ -1016,12 +1081,12 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
         </div>
       )}
 
-      <div className="form-actions">
+      <div className="step-actions">
         <button 
           className="action-btn secondary"
-          onClick={() => setShowLinkForm(false)}
+          onClick={() => setLinkStep(2)}
         >
-          Cancel
+          ← Back to Billing
         </button>
         <button 
           className={`action-btn primary ${isLinking ? 'processing' : ''}`}
@@ -1036,7 +1101,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           ) : (
             <>
               <FaLink />
-              Link Account
+              Complete Linking
             </>
           )}
         </button>
@@ -1044,179 +1109,76 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     </div>
   );
 
-  // Step 4: Crypto Payment Instructions OR Card Payment
-  const renderStep4 = () => {
-    if (selectedPaymentMethod === 'crypto') {
-      const selectedCryptoData = cryptoOptions.find(c => c.id === selectedCrypto);
-      
-      return (
-        <div className="checkout-step">
-          <h2>Make Your Payment</h2>
-          
-          <div className="payment-details">
-            <div className="amount-card">
-              <div className="amount-display">
-                <span className="crypto-symbol">Send exactly ${donationAmount} USD to the {selectedCrypto.toUpperCase()} address below</span>
-              </div>
-            </div>
-            
-            <div className="timer-warning">
-              <FaExchangeAlt />
-              <span>Price valid for: <strong>{formatTime(timer)}</strong></span>
-            </div>
-            
-            <div className="address-section">
-              <label>Send to this {selectedCrypto.toUpperCase()} address:</label>
-              <div className="address-display">
-                <span>{selectedCryptoData.address}</span>
-                <button 
-                  className="copy-btn"
-                  onClick={() => copyToClipboard(selectedCryptoData.address)}
-                >
-                  {copiedAddress ? <FaCheck /> : <FaCopy />}
-                </button>
-              </div>
-            </div>
-            
-            <div className="qr-code-section">
-              <div className="qr-code">
-                <img 
-                  src={selectedCryptoData.image} 
-                  alt={`${selectedCrypto.toUpperCase()} QR Code`}
-                  className="qr-code-image"
-                />
-                <p>Scan QR Code</p>
-              </div>
-            </div>
-            
-            <div className="payment-instructions">
-              <h4>Important Instructions:</h4>
-              <ul>
-                <li>Send exactly ${donationAmount} in {selectedCrypto.toUpperCase()}</li>
-                <li>Use only the {selectedCrypto.toUpperCase()} network</li>
-                <li>Do not send from an exchange wallet</li>
-                <li>Transaction may take 5-15 minutes to confirm</li>
-              </ul>
-            </div>
-          </div>
-          
-          <button className="next-btn" onClick={() => setStep(5)}>
-            I've Sent the Payment
-          </button>
-        </div>
-      );
-    } else if (selectedPaymentMethod === 'card') {
-      // Card Payment Confirmation
-      return (
-        <div className="checkout-step">
-          <h2>Confirm Your Payment</h2>
-          <p className="step-description">Review your donation and linked account details</p>
-          
-          <div className="payment-confirmation">
-            <div className="confirmation-card">
-              <div className="donation-summary">
-                <h4>Donation Summary</h4>
-                <div className="summary-item">
-                  <span>Campaign:</span>
-                  <span>{campaign.title}</span>
-                </div>
-                <div className="summary-item">
-                  <span>Amount:</span>
-                  <span>${donationAmount}</span>
-                </div>
-                <div className="summary-item">
-                  <span>Processing Fee:</span>
-                  <span>$0.00</span>
-                </div>
-                <div className="summary-item total">
-                  <span>Total:</span>
-                  <span>${donationAmount}</span>
-                </div>
-              </div>
-              
-              <div className="account-preview">
-                <h4>Linked Account</h4>
-                <div className="account-details-preview">
-                  <div className="detail-item">
-                    <span>Card:</span>
-                    <span>•••• {cardDetails.cardNumber.slice(-4)}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span>Cardholder:</span>
-                    <span>{cardDetails.cardholderName}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span>Email:</span>
-                    <span>{accountInfo.email}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Failure Message with Manual Redirect Button */}
-              {paymentFailed && (
-                <div className="payment-failure-message">
-                  <div className="failure-header">
-                    <FaExclamationTriangle />
-                    <h4>Payment Failed</h4>
-                  </div>
-                  <p>We apologize, but card payments are currently unavailable. Please use cryptocurrency to complete your donation.</p>
-                  
-                  {showCryptoRedirect && (
-                    <div className="crypto-redirect-section">
-                      <div className="redirect-prompt">
-                        <p>Would you like to pay with cryptocurrency instead?</p>
-                      </div>
-                      <button 
-                        className="crypto-redirect-btn"
-                        onClick={handleRedirectToCrypto}
-                      >
-                        <FaEthereum />
-                        Pay with Cryptocurrency
-                        <FaArrowRight />
-                      </button>
-                      <button 
-                        className="action-btn secondary"
-                        onClick={() => setPaymentFailed(false)}
-                      >
-                        Try Card Payment Again
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {cardErrors.general && !paymentFailed && (
-                <div className="error-message general-error">
-                  {cardErrors.general}
-                </div>
-              )}
-              
-              {!paymentFailed && (
-                <button 
-                  className={`pay-now-btn ${isProcessing ? 'processing' : ''}`}
-                  onClick={handleCardPayment}
-                  disabled={isProcessing || !isAccountLinked}
-                >
-                  {isProcessing ? (
-                    <>
-                      <div className="spinner"></div>
-                      Processing Payment...
-                    </>
-                  ) : (
-                    `Pay $${donationAmount} Now`
-                  )}
-                </button>
-              )}
-              
-              <div className="security-assurance">
-                <FaShieldAlt />
-                <span>Your payment is secured with bank-level encryption</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
+  // Render current link step
+  const renderLinkStep = () => {
+    switch (linkStep) {
+      case 1: return renderLinkStep1();
+      case 2: return renderLinkStep2();
+      case 3: return renderLinkStep3();
+      default: return renderLinkStep1();
     }
+  };
+
+  // Step 4: Crypto Payment Instructions
+  const renderStep4 = () => {
+    const selectedCryptoData = cryptoOptions.find(c => c.id === selectedCrypto);
+    
+    return (
+      <div className="checkout-step">
+        <h2>Make Your Payment</h2>
+        
+        <div className="payment-details">
+          <div className="amount-card">
+            <div className="amount-display">
+              <span className="crypto-symbol">Send exactly ${donationAmount} USD to the {selectedCrypto.toUpperCase()} address below</span>
+            </div>
+          </div>
+          
+          <div className="timer-warning">
+            <FaExchangeAlt />
+            <span>Price valid for: <strong>{formatTime(timer)}</strong></span>
+          </div>
+          
+          <div className="address-section">
+            <label>Send to this {selectedCrypto.toUpperCase()} address:</label>
+            <div className="address-display">
+              <span>{selectedCryptoData.address}</span>
+              <button 
+                className="copy-btn"
+                onClick={() => copyToClipboard(selectedCryptoData.address)}
+              >
+                {copiedAddress ? <FaCheck /> : <FaCopy />}
+              </button>
+            </div>
+          </div>
+          
+          <div className="qr-code-section">
+            <div className="qr-code">
+              <img 
+                src={selectedCryptoData.image} 
+                alt={`${selectedCrypto.toUpperCase()} QR Code`}
+                className="qr-code-image"
+              />
+              <p>Scan QR Code</p>
+            </div>
+          </div>
+          
+          <div className="payment-instructions">
+            <h4>Important Instructions:</h4>
+            <ul>
+              <li>Send exactly ${donationAmount} in {selectedCrypto.toUpperCase()}</li>
+              <li>Use only the {selectedCrypto.toUpperCase()} network</li>
+              <li>Do not send from an exchange wallet</li>
+              <li>Transaction may take 5-15 minutes to confirm</li>
+            </ul>
+          </div>
+        </div>
+        
+        <button className="next-btn" onClick={() => setStep(5)}>
+          I've Sent the Payment
+        </button>
+      </div>
+    );
   };
 
   // Step 5: Crypto Verification
@@ -1271,8 +1233,119 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     </div>
   );
 
-  // Step 6: Payment Success
+  // Step 6: Card Payment Confirmation (NEW STEP)
   const renderStep6 = () => (
+    <div className="checkout-step">
+      <h2>Confirm Your Payment</h2>
+      <p className="step-description">Review your donation and linked account details</p>
+      
+      <div className="payment-confirmation">
+        <div className="confirmation-card">
+          <div className="donation-summary">
+            <h4>Donation Summary</h4>
+            <div className="summary-item">
+              <span>Campaign:</span>
+              <span>{campaign.title}</span>
+            </div>
+            <div className="summary-item">
+              <span>Amount:</span>
+              <span>${donationAmount}</span>
+            </div>
+            <div className="summary-item">
+              <span>Processing Fee:</span>
+              <span>$0.00</span>
+            </div>
+            <div className="summary-item total">
+              <span>Total:</span>
+              <span>${donationAmount}</span>
+            </div>
+          </div>
+          
+          <div className="account-preview">
+            <h4>Linked Account</h4>
+            <div className="account-details-preview">
+              <div className="detail-item">
+                <span>Card:</span>
+                <span>•••• {cardDetails.cardNumber.slice(-4)}</span>
+              </div>
+              <div className="detail-item">
+                <span>Cardholder:</span>
+                <span>{cardDetails.cardholderName}</span>
+              </div>
+              <div className="detail-item">
+                <span>Email:</span>
+                <span>{accountInfo.email}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Failure Message with Manual Redirect Button */}
+          {paymentFailed && (
+            <div className="payment-failure-message">
+              <div className="failure-header">
+                <FaExclamationTriangle />
+                <h4>Payment Failed</h4>
+              </div>
+              <p>We apologize, but card payments are currently unavailable. Please use cryptocurrency to complete your donation.</p>
+              
+              {showCryptoRedirect && (
+                <div className="crypto-redirect-section">
+                  <div className="redirect-prompt">
+                    <p>Would you like to pay with cryptocurrency instead?</p>
+                  </div>
+                  <button 
+                    className="crypto-redirect-btn"
+                    onClick={handleRedirectToCrypto}
+                  >
+                    <FaEthereum />
+                    Pay with Cryptocurrency
+                    <FaArrowRight />
+                  </button>
+                  <button 
+                    className="action-btn secondary"
+                    onClick={() => setPaymentFailed(false)}
+                  >
+                    Try Card Payment Again
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {cardErrors.general && !paymentFailed && (
+            <div className="error-message general-error">
+              {cardErrors.general}
+            </div>
+          )}
+          
+          {!paymentFailed && (
+            <button 
+              className={`pay-now-btn ${isProcessing ? 'processing' : ''}`}
+              onClick={handleCardPayment}
+              disabled={isProcessing || !isAccountLinked}
+            >
+              {isProcessing ? (
+                <>
+                  <div className="spinner"></div>
+                  Processing Payment...
+                </>
+              ) : (
+                `Pay $${donationAmount} Now`
+              )}
+            </button>
+          )}
+          
+          <div className="security-assurance">
+            <FaShieldAlt />
+            <span>Your payment is secured with bank-level encryption</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Step 7: Payment Success
+  const renderStep7 = () => (
     <div className="checkout-step success-step">
       <div className="success-icon">✓</div>
       <h2>Payment Successful!</h2>
@@ -1315,28 +1388,37 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       case 1: return renderStep1();
       case 2: return renderStep2();
       case 3: return renderStep3();
-      case 4: return renderStep4();
-      case 5: return renderStep5();
-      case 6: return renderStep6();
+      case 4: return renderStep4(); // Crypto payment instructions
+      case 5: return renderStep5(); // Crypto verification
+      case 6: return renderStep6(); // Card payment confirmation
+      case 7: return renderStep7(); // Success
       default: return renderStep1();
     }
   };
 
   const getStepNumber = () => {
     if (selectedPaymentMethod === 'crypto') {
+      // Crypto flow: 1 -> 2 -> 4 -> 5 -> 7
+      if (step === 4) return 3; // Payment instructions
+      if (step === 5) return 4; // Verification
+      if (step === 7) return 5; // Success
       return step;
     } else if (selectedPaymentMethod === 'card') {
-      if (step === 4) return 3; // Payment confirmation
-      if (step === 6) return 4; // Success
+      // Card flow: 1 -> 6 -> 7
+      if (step === 6) return 2; // Payment confirmation
+      if (step === 7) return 3; // Success
+      return step;
     } else if (selectedPaymentMethod === 'link') {
+      // Link flow: 1 -> 3
       if (step === 3) return 2; // Account linking
+      return step;
     }
     return step;
   };
 
   const getTotalSteps = () => {
     if (selectedPaymentMethod === 'crypto') return 5;
-    if (selectedPaymentMethod === 'card') return 4;
+    if (selectedPaymentMethod === 'card') return 3;
     if (selectedPaymentMethod === 'link') return 2;
     return 1;
   };
@@ -1347,7 +1429,15 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
         <div className="checkout-header">
           <button 
             className="back-button"
-            onClick={step > 1 ? () => setStep(step - 1) : onClose}
+            onClick={() => {
+              if (showLinkForm && linkStep > 1) {
+                setLinkStep(linkStep - 1);
+              } else if (showLinkForm && linkStep === 1) {
+                setShowLinkForm(false);
+              } else {
+                step > 1 ? setStep(step - 1) : onClose();
+              }
+            }}
           >
             ← Back
           </button>
@@ -1368,20 +1458,16 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
             <span>2</span>
             <label>
               {selectedPaymentMethod === 'crypto' ? 'Select Crypto' : 
-               selectedPaymentMethod === 'card' ? 'Link Account' : 
+               selectedPaymentMethod === 'card' ? 'Pay' : 
                'Link Account'}
-            </label>
-          </div>
-          <div className={`step ${getStepNumber() >= 3 ? 'active' : ''}`}>
-            <span>3</span>
-            <label>
-              {selectedPaymentMethod === 'crypto' ? 'Pay' : 
-               selectedPaymentMethod === 'card' ? 'Confirm' : 
-               'Complete'}
             </label>
           </div>
           {selectedPaymentMethod === 'crypto' && (
             <>
+              <div className={`step ${getStepNumber() >= 3 ? 'active' : ''}`}>
+                <span>3</span>
+                <label>Pay</label>
+              </div>
               <div className={`step ${getStepNumber() >= 4 ? 'active' : ''}`}>
                 <span>4</span>
                 <label>Verify</label>
@@ -1393,8 +1479,8 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
             </>
           )}
           {selectedPaymentMethod === 'card' && (
-            <div className={`step ${getStepNumber() >= 4 ? 'active' : ''}`}>
-              <span>4</span>
+            <div className={`step ${getStepNumber() >= 3 ? 'active' : ''}`}>
+              <span>3</span>
               <label>Complete</label>
             </div>
           )}
