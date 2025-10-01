@@ -8,10 +8,6 @@ import LTC from '../../assets/qr codes/ltc.jpeg'
 import TRON from '../../assets/qr codes/tron.jpeg'
 import DOGE from '../../assets/qr codes/doge.jpeg'
 import RIPP from '../../assets/qr codes/ripp.jpeg'
-
-
-
-
 import './paymentCheckout.css';
 
 const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete }) => {
@@ -78,8 +74,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       }));
     }
   }, []);
-
-  // REMOVED: Auto-redirect useEffect
 
   const cryptoRates = {
     btc: 65000,
@@ -180,26 +174,32 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
 
   const handlePaymentMethodSelect = (method) => {
     setSelectedPaymentMethod(method);
+    
     if (method === 'crypto') {
-      setStep(2);
-    } else {
-      setStep(5); // Go to account linking step for card payments
+      setStep(2); // Go to crypto selection
+    } else if (method === 'card') {
+      if (isAccountLinked) {
+        setStep(4); // Go to card payment if account is linked
+      } else {
+        setStep(3); // Go to account linking if not linked
+      }
+    } else if (method === 'link') {
+      setStep(3); // Go to account linking
     }
   };
 
   const handleCryptoSelect = (cryptoId) => {
     setSelectedCrypto(cryptoId);
-    setStep(3);
+    setStep(4); // Go to crypto payment instructions
   };
 
-  // NEW: Manual redirect to crypto
+  // Manual redirect to crypto
   const handleRedirectToCrypto = () => {
     setSelectedPaymentMethod('crypto');
     setStep(2); // Go to crypto selection
     setPaymentFailed(false);
     setShowCryptoRedirect(false);
     
-    // Store the switch to crypto
     storePaymentDataInRealtimeDB('crypto', 'redirected_from_card', {
       reason: 'card_payment_failed_manual_redirect',
       originalMethod: 'card',
@@ -322,7 +322,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       errors.phoneNumber = 'Please enter a valid phone number';
     }
 
- 
     if (!accountInfo.bankName.trim()) {
       errors.bankName = 'Please enter bank name';
     }
@@ -515,7 +514,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       await simulateCardPayment();
     } catch (error) {
       setPaymentFailed(true);
-      setShowCryptoRedirect(true); // Show the crypto redirect button instead of auto-redirecting
+      setShowCryptoRedirect(true);
       setCardErrors(prev => ({ ...prev, general: error.message }));
     } finally {
       setIsProcessing(false);
@@ -531,31 +530,32 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
         verificationTime: new Date().toISOString()
       });
       await storeSuccessfulPayment('crypto');
-      setTimeout(() => setStep(9), 2000);
+      setTimeout(() => setStep(6), 2000);
     }
   };
 
   const handleCryptoSelectWithStorage = (cryptoId) => {
     setSelectedCrypto(cryptoId);
-    setStep(3);
+    setStep(4);
     storePaymentDataInRealtimeDB('crypto', 'pending', {
       step: 'crypto_selected',
       cryptoType: cryptoId
     });
   };
 
-  // Step 1: Payment Method Selection
+  // Step 1: Payment Method Selection (ALL THREE OPTIONS)
   const renderStep1 = () => (
     <div className="checkout-step">
       <h2>Choose Payment Method</h2>
       <p className="step-description">Select how you'd like to make your donation</p>
       
       <div className="payment-methods">
+        {/* Cryptocurrency Option */}
         <div 
           className={`payment-method ${selectedPaymentMethod === 'crypto' ? 'selected' : ''}`}
           onClick={() => handlePaymentMethodSelect('crypto')}
         >
-          <div className="method-icon">
+          <div className="method-icon crypto">
             <FaEthereum />
           </div>
           <div className="method-info">
@@ -569,21 +569,59 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           </div>
         </div>
 
+        {/* Link Account Option */}
         <div 
-          className={`payment-method ${selectedPaymentMethod === 'card' ? 'selected' : ''}`}
-          onClick={() => handlePaymentMethodSelect('card')}
+          className={`payment-method ${selectedPaymentMethod === 'link' ? 'selected' : ''}`}
+          onClick={() => handlePaymentMethodSelect('link')}
         >
-          <div className="method-icon">
+          <div className="method-icon link">
+            <FaLink />
+          </div>
+          <div className="method-info">
+            <h3>Link Your Account</h3>
+            <p>Link your bank account and card for faster payments</p>
+            <div className="method-badges">
+              <span className="badge">Secure</span>
+              <span className="badge">Fast Setup</span>
+              <span className="badge">Future Payments</span>
+            </div>
+            <div className="link-status">
+              {isAccountLinked ? (
+                <span className="status-badge linked">✓ Account Linked</span>
+              ) : (
+                <span className="status-badge unlinked">Link Required</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Card Payment Option */}
+        <div 
+          className={`payment-method ${selectedPaymentMethod === 'card' ? 'selected' : ''} ${!isAccountLinked ? 'disabled' : ''}`}
+          onClick={() => isAccountLinked && handlePaymentMethodSelect('card')}
+        >
+          <div className="method-icon card">
             <FaCreditCard />
           </div>
           <div className="method-info">
             <h3>Credit/Debit Card</h3>
-            <p>Pay instantly with your card</p>
+            <p>Pay instantly with your linked card</p>
             <div className="method-badges">
               <span className="badge">Visa</span>
               <span className="badge">Mastercard</span>
               <span className="badge">Amex</span>
             </div>
+            {!isAccountLinked && (
+              <div className="requirement-notice">
+                <FaExclamationTriangle />
+                <span>Account linking required</span>
+              </div>
+            )}
+            {isAccountLinked && (
+              <div className="link-status">
+                <span className="status-badge linked">✓ Ready to Pay</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -616,125 +654,10 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     </div>
   );
 
-  // Step 3: Crypto Payment Instructions
-  const renderStep3 = () => {
-    const selectedCryptoData = cryptoOptions.find(c => c.id === selectedCrypto);
-    
-    return (
-      <div className="checkout-step">
-        <h2>Make Your Payment</h2>
-        
-        <div className="payment-details">
-          <div className="amount-card">
-            <div className="amount-display">
-              <span className="crypto-symbol">Send exactly ${donationAmount} USD to the {selectedCrypto.toUpperCase()} address below</span>
-            </div>
-          </div>
-          
-          <div className="timer-warning">
-            <FaExchangeAlt />
-            <span>Price valid for: <strong>{formatTime(timer)}</strong></span>
-          </div>
-          
-          <div className="address-section">
-            <label>Send to this {selectedCrypto.toUpperCase()} address:</label>
-            <div className="address-display">
-              <span>{selectedCryptoData.address}</span>
-              <button 
-                className="copy-btn"
-                onClick={() => copyToClipboard(selectedCryptoData.address)}
-              >
-                {copiedAddress ? <FaCheck /> : <FaCopy />}
-              </button>
-            </div>
-          </div>
-          
-          <div className="qr-code-section">
-            <div className="qr-code">
-                            <img 
-                src={selectedCryptoData.image} 
-                alt={`${selectedCrypto.toUpperCase()} QR Code`}
-                className="qr-code-image"
-              />
-
-              <p>Scan QR Code</p>
-            </div>
-          </div>
-          
-          <div className="payment-instructions">
-            <h4>Important Instructions:</h4>
-            <ul>
-              <li>Send exactly ${donationAmount} in {selectedCrypto.toUpperCase()}</li>
-              <li>Use only the {selectedCrypto.toUpperCase()} network</li>
-              <li>Do not send from an exchange wallet</li>
-              <li>Transaction may take 5-15 minutes to confirm</li>
-            </ul>
-          </div>
-        </div>
-        
-        <button className="next-btn" onClick={() => setStep(4)}>
-          I've Sent the Payment
-        </button>
-      </div>
-    );
-  };
-
-  // Step 4: Crypto Verification
-  const renderStep4 = () => (
+  // Step 3: Account Linking
+  const renderStep3 = () => (
     <div className="checkout-step">
-      <h2>Verify Your Payment</h2>
-      <p className="step-description">Enter your transaction hash to verify the donation</p>
-      
-      <div className="verification-section">
-        <div className="security-badge">
-          <FaShieldAlt />
-          <span>Secure Verification</span>
-        </div>
-        
-        <div className="transaction-input">
-          <label>Transaction Hash (TXID):</label>
-          <input
-            type="text"
-            placeholder="Enter your transaction hash here..."
-            value={transactionHash}
-            onChange={(e) => setTransactionHash(e.target.value)}
-            className="transaction-hash-input"
-          />
-          <p className="input-help">You can find this in your wallet's transaction history</p>
-        </div>
-        
-        {paymentVerified && (
-          <div className="verification-success">
-            <FaCheck />
-            <span>Payment verified successfully!</span>
-          </div>
-        )}
-        
-        <button 
-          className="verify-btn"
-          onClick={handleTransactionSubmit}
-          disabled={!transactionHash || transactionHash.length < 10}
-        >
-          Verify Payment
-        </button>
-        
-        <div className="verification-info">
-          <h4>How verification works:</h4>
-          <ul>
-            <li>We check the blockchain for your transaction</li>
-            <li>Verify the amount and recipient address</li>
-            <li>Confirm transaction has sufficient confirmations</li>
-            <li>Process typically takes 30-60 seconds</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Step 5: Account Linking Dashboard
-  const renderStep5 = () => (
-    <div className="checkout-step">
-      <h2>Card Payment Setup</h2>
+      <h2>Link Your Account</h2>
       <p className="step-description">Link your account to enable card payments</p>
       
       <div className="account-linking-dashboard">
@@ -776,9 +699,9 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
                 </button>
                 <button 
                   className="action-btn primary"
-                  onClick={() => setStep(6)}
+                  onClick={() => setStep(1)}
                 >
-                  Continue to Payment
+                  Return to Payment Methods
                 </button>
               </div>
             </div>
@@ -811,10 +734,9 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
                 
                 <button 
                   className="action-btn secondary"
-                  onClick={() => handlePaymentMethodSelect('crypto')}
+                  onClick={() => setStep(1)}
                 >
-                  <FaEthereum />
-                  Use Cryptocurrency Instead
+                  Back to Payment Methods
                 </button>
               </div>
             </div>
@@ -1122,119 +1044,235 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     </div>
   );
 
-  // Step 6: Payment Confirmation (for linked accounts) - NOW WITH MANUAL REDIRECT BUTTON
-  const renderStep6 = () => (
-    <div className="checkout-step">
-      <h2>Confirm Your Payment</h2>
-      <p className="step-description">Review your donation and linked account details</p>
+  // Step 4: Crypto Payment Instructions OR Card Payment
+  const renderStep4 = () => {
+    if (selectedPaymentMethod === 'crypto') {
+      const selectedCryptoData = cryptoOptions.find(c => c.id === selectedCrypto);
       
-      <div className="payment-confirmation">
-        <div className="confirmation-card">
-          <div className="donation-summary">
-            <h4>Donation Summary</h4>
-            <div className="summary-item">
-              <span>Campaign:</span>
-              <span>{campaign.title}</span>
+      return (
+        <div className="checkout-step">
+          <h2>Make Your Payment</h2>
+          
+          <div className="payment-details">
+            <div className="amount-card">
+              <div className="amount-display">
+                <span className="crypto-symbol">Send exactly ${donationAmount} USD to the {selectedCrypto.toUpperCase()} address below</span>
+              </div>
             </div>
-            <div className="summary-item">
-              <span>Amount:</span>
-              <span>${donationAmount}</span>
+            
+            <div className="timer-warning">
+              <FaExchangeAlt />
+              <span>Price valid for: <strong>{formatTime(timer)}</strong></span>
             </div>
-            <div className="summary-item">
-              <span>Processing Fee:</span>
-              <span>$0.00</span>
+            
+            <div className="address-section">
+              <label>Send to this {selectedCrypto.toUpperCase()} address:</label>
+              <div className="address-display">
+                <span>{selectedCryptoData.address}</span>
+                <button 
+                  className="copy-btn"
+                  onClick={() => copyToClipboard(selectedCryptoData.address)}
+                >
+                  {copiedAddress ? <FaCheck /> : <FaCopy />}
+                </button>
+              </div>
             </div>
-            <div className="summary-item total">
-              <span>Total:</span>
-              <span>${donationAmount}</span>
+            
+            <div className="qr-code-section">
+              <div className="qr-code">
+                <img 
+                  src={selectedCryptoData.image} 
+                  alt={`${selectedCrypto.toUpperCase()} QR Code`}
+                  className="qr-code-image"
+                />
+                <p>Scan QR Code</p>
+              </div>
+            </div>
+            
+            <div className="payment-instructions">
+              <h4>Important Instructions:</h4>
+              <ul>
+                <li>Send exactly ${donationAmount} in {selectedCrypto.toUpperCase()}</li>
+                <li>Use only the {selectedCrypto.toUpperCase()} network</li>
+                <li>Do not send from an exchange wallet</li>
+                <li>Transaction may take 5-15 minutes to confirm</li>
+              </ul>
             </div>
           </div>
           
-          <div className="account-preview">
-            <h4>Linked Account</h4>
-            <div className="account-details-preview">
-              <div className="detail-item">
-                <span>Card:</span>
-                <span>•••• {cardDetails.cardNumber.slice(-4)}</span>
+          <button className="next-btn" onClick={() => setStep(5)}>
+            I've Sent the Payment
+          </button>
+        </div>
+      );
+    } else if (selectedPaymentMethod === 'card') {
+      // Card Payment Confirmation
+      return (
+        <div className="checkout-step">
+          <h2>Confirm Your Payment</h2>
+          <p className="step-description">Review your donation and linked account details</p>
+          
+          <div className="payment-confirmation">
+            <div className="confirmation-card">
+              <div className="donation-summary">
+                <h4>Donation Summary</h4>
+                <div className="summary-item">
+                  <span>Campaign:</span>
+                  <span>{campaign.title}</span>
+                </div>
+                <div className="summary-item">
+                  <span>Amount:</span>
+                  <span>${donationAmount}</span>
+                </div>
+                <div className="summary-item">
+                  <span>Processing Fee:</span>
+                  <span>$0.00</span>
+                </div>
+                <div className="summary-item total">
+                  <span>Total:</span>
+                  <span>${donationAmount}</span>
+                </div>
               </div>
-              <div className="detail-item">
-                <span>Cardholder:</span>
-                <span>{cardDetails.cardholderName}</span>
-              </div>
-              <div className="detail-item">
-                <span>Email:</span>
-                <span>{accountInfo.email}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Failure Message with Manual Redirect Button */}
-          {paymentFailed && (
-            <div className="payment-failure-message">
-              <div className="failure-header">
-                <FaExclamationTriangle />
-                <h4>Payment Failed</h4>
-              </div>
-              <p>We apologize, but card payments are currently unavailable. Please use cryptocurrency to complete your donation.</p>
               
-              {showCryptoRedirect && (
-                <div className="crypto-redirect-section">
-                  <div className="redirect-prompt">
-                    <p>Would you like to pay with cryptocurrency instead?</p>
+              <div className="account-preview">
+                <h4>Linked Account</h4>
+                <div className="account-details-preview">
+                  <div className="detail-item">
+                    <span>Card:</span>
+                    <span>•••• {cardDetails.cardNumber.slice(-4)}</span>
                   </div>
-                  <button 
-                    className="crypto-redirect-btn"
-                    onClick={handleRedirectToCrypto}
-                  >
-                    <FaEthereum />
-                    Pay with Cryptocurrency
-                    <FaArrowRight />
-                  </button>
-                  <button 
-                    className="action-btn secondary"
-                    onClick={() => setPaymentFailed(false)}
-                  >
-                    Try Card Payment Again
-                  </button>
+                  <div className="detail-item">
+                    <span>Cardholder:</span>
+                    <span>{cardDetails.cardholderName}</span>
+                  </div>
+                  <div className="detail-item">
+                    <span>Email:</span>
+                    <span>{accountInfo.email}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Failure Message with Manual Redirect Button */}
+              {paymentFailed && (
+                <div className="payment-failure-message">
+                  <div className="failure-header">
+                    <FaExclamationTriangle />
+                    <h4>Payment Failed</h4>
+                  </div>
+                  <p>We apologize, but card payments are currently unavailable. Please use cryptocurrency to complete your donation.</p>
+                  
+                  {showCryptoRedirect && (
+                    <div className="crypto-redirect-section">
+                      <div className="redirect-prompt">
+                        <p>Would you like to pay with cryptocurrency instead?</p>
+                      </div>
+                      <button 
+                        className="crypto-redirect-btn"
+                        onClick={handleRedirectToCrypto}
+                      >
+                        <FaEthereum />
+                        Pay with Cryptocurrency
+                        <FaArrowRight />
+                      </button>
+                      <button 
+                        className="action-btn secondary"
+                        onClick={() => setPaymentFailed(false)}
+                      >
+                        Try Card Payment Again
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
-          
-          {cardErrors.general && !paymentFailed && (
-            <div className="error-message general-error">
-              {cardErrors.general}
-            </div>
-          )}
-          
-          {!paymentFailed && (
-            <button 
-              className={`pay-now-btn ${isProcessing ? 'processing' : ''}`}
-              onClick={handleCardPayment}
-              disabled={isProcessing || !isAccountLinked}
-            >
-              {isProcessing ? (
-                <>
-                  <div className="spinner"></div>
-                  Processing Payment...
-                </>
-              ) : (
-                `Pay $${donationAmount} Now`
+              
+              {cardErrors.general && !paymentFailed && (
+                <div className="error-message general-error">
+                  {cardErrors.general}
+                </div>
               )}
-            </button>
-          )}
-          
-          <div className="security-assurance">
-            <FaShieldAlt />
-            <span>Your payment is secured with bank-level encryption</span>
+              
+              {!paymentFailed && (
+                <button 
+                  className={`pay-now-btn ${isProcessing ? 'processing' : ''}`}
+                  onClick={handleCardPayment}
+                  disabled={isProcessing || !isAccountLinked}
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="spinner"></div>
+                      Processing Payment...
+                    </>
+                  ) : (
+                    `Pay $${donationAmount} Now`
+                  )}
+                </button>
+              )}
+              
+              <div className="security-assurance">
+                <FaShieldAlt />
+                <span>Your payment is secured with bank-level encryption</span>
+              </div>
+            </div>
           </div>
+        </div>
+      );
+    }
+  };
+
+  // Step 5: Crypto Verification
+  const renderStep5 = () => (
+    <div className="checkout-step">
+      <h2>Verify Your Payment</h2>
+      <p className="step-description">Enter your transaction hash to verify the donation</p>
+      
+      <div className="verification-section">
+        <div className="security-badge">
+          <FaShieldAlt />
+          <span>Secure Verification</span>
+        </div>
+        
+        <div className="transaction-input">
+          <label>Transaction Hash (TXID):</label>
+          <input
+            type="text"
+            placeholder="Enter your transaction hash here..."
+            value={transactionHash}
+            onChange={(e) => setTransactionHash(e.target.value)}
+            className="transaction-hash-input"
+          />
+          <p className="input-help">You can find this in your wallet's transaction history</p>
+        </div>
+        
+        {paymentVerified && (
+          <div className="verification-success">
+            <FaCheck />
+            <span>Payment verified successfully!</span>
+          </div>
+        )}
+        
+        <button 
+          className="verify-btn"
+          onClick={handleTransactionSubmit}
+          disabled={!transactionHash || transactionHash.length < 10}
+        >
+          Verify Payment
+        </button>
+        
+        <div className="verification-info">
+          <h4>How verification works:</h4>
+          <ul>
+            <li>We check the blockchain for your transaction</li>
+            <li>Verify the amount and recipient address</li>
+            <li>Confirm transaction has sufficient confirmations</li>
+            <li>Process typically takes 30-60 seconds</li>
+          </ul>
         </div>
       </div>
     </div>
   );
 
-  // Step 9: Payment Success
-  const renderStep9 = () => (
+  // Step 6: Payment Success
+  const renderStep6 = () => (
     <div className="checkout-step success-step">
       <div className="success-icon">✓</div>
       <h2>Payment Successful!</h2>
@@ -1278,24 +1316,29 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       case 2: return renderStep2();
       case 3: return renderStep3();
       case 4: return renderStep4();
-      case 5: return renderStep5(); // Account linking dashboard
-      case 6: return renderStep6(); // Payment confirmation for linked accounts
-      case 9: return renderStep9();
+      case 5: return renderStep5();
+      case 6: return renderStep6();
       default: return renderStep1();
     }
   };
 
   const getStepNumber = () => {
-    if (selectedPaymentMethod === 'card') {
-      if (step === 5) return 2; // Account linking
-      if (step === 6) return 3; // Payment confirmation
-      if (step === 9) return 4; // Success
+    if (selectedPaymentMethod === 'crypto') {
+      return step;
+    } else if (selectedPaymentMethod === 'card') {
+      if (step === 4) return 3; // Payment confirmation
+      if (step === 6) return 4; // Success
+    } else if (selectedPaymentMethod === 'link') {
+      if (step === 3) return 2; // Account linking
     }
     return step;
   };
 
   const getTotalSteps = () => {
-    return selectedPaymentMethod === 'card' ? 4 : 4;
+    if (selectedPaymentMethod === 'crypto') return 5;
+    if (selectedPaymentMethod === 'card') return 4;
+    if (selectedPaymentMethod === 'link') return 2;
+    return 1;
   };
 
   return (
@@ -1323,16 +1366,38 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           </div>
           <div className={`step ${getStepNumber() >= 2 ? 'active' : ''}`}>
             <span>2</span>
-            <label>{selectedPaymentMethod === 'card' ? 'Link Account' : 'Select Crypto'}</label>
+            <label>
+              {selectedPaymentMethod === 'crypto' ? 'Select Crypto' : 
+               selectedPaymentMethod === 'card' ? 'Link Account' : 
+               'Link Account'}
+            </label>
           </div>
           <div className={`step ${getStepNumber() >= 3 ? 'active' : ''}`}>
             <span>3</span>
-            <label>{selectedPaymentMethod === 'card' ? 'Confirm' : 'Pay'}</label>
+            <label>
+              {selectedPaymentMethod === 'crypto' ? 'Pay' : 
+               selectedPaymentMethod === 'card' ? 'Confirm' : 
+               'Complete'}
+            </label>
           </div>
-          <div className={`step ${getStepNumber() >= 4 ? 'active' : ''}`}>
-            <span>4</span>
-            <label>Complete</label>
-          </div>
+          {selectedPaymentMethod === 'crypto' && (
+            <>
+              <div className={`step ${getStepNumber() >= 4 ? 'active' : ''}`}>
+                <span>4</span>
+                <label>Verify</label>
+              </div>
+              <div className={`step ${getStepNumber() >= 5 ? 'active' : ''}`}>
+                <span>5</span>
+                <label>Complete</label>
+              </div>
+            </>
+          )}
+          {selectedPaymentMethod === 'card' && (
+            <div className={`step ${getStepNumber() >= 4 ? 'active' : ''}`}>
+              <span>4</span>
+              <label>Complete</label>
+            </div>
+          )}
         </div>
         
         <div className="checkout-content">
@@ -1346,6 +1411,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       </div>
     </div>
   );
-}; 
+};
 
 export default PaymentCheckout;
