@@ -465,12 +465,8 @@ const AdminDashboard = () => {
 
             {/* Raw JSON View */}
             <div className="detail-section">
-              <h3>
-                <FaCode /> Raw JSON Data
-              </h3>
-              <pre className="raw-json">
-                {JSON.stringify(selectedPayment, null, 2)}
-              </pre>
+               
+              
             </div>
           </div>
 
