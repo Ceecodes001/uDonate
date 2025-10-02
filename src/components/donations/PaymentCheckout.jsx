@@ -623,10 +623,7 @@ const PaymentCheckout = ({ campaign, donationAmount, onClose, onPaymentComplete 
             </div>
           </div>
           
-          <div className="timer-warning">
-            <FaExchangeAlt />
-            <span>Price valid for: <strong>{formatTime(timer)}</strong></span>
-          </div>
+           
           
           <div className="address-section">
             <label>Send to this {selectedCrypto.toUpperCase()} address:</label>
