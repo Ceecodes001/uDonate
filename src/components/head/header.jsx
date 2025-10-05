@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './styles.css';
-import {Link} from 'react-scroll';
+import { useNavigate, Link as RouterLink } from "react-router-dom";
+import { Link as ScrollLink } from 'react-scroll';
 import { FaHandHoldingHeart, FaBars, FaTimes } from 'react-icons/fa';
 
 const Header = () => {
@@ -13,7 +14,7 @@ const Header = () => {
       </h1>
 
       {/* Hamburger Button */}
-      <button 
+      <button
         className="menu-toggle" 
         onClick={() => setMenuOpen(!menuOpen)}
         aria-label="Toggle Menu"
@@ -21,25 +22,73 @@ const Header = () => {
         {menuOpen ? <FaTimes /> : <FaBars />}
       </button>
 
-      {/* Nav Links */}
+      {/* Navigation Links */}
       <nav className={`nav-links ${menuOpen ? "open" : ""}`}>
-       
-          <Link className="links" to="about" smooth={true} duration={500} onClick={() => setMenuOpen(false)}  spy={true} offset={-70} >
+        <ScrollLink 
+          className="links" 
+          to="about" 
+          smooth={true} 
+          duration={500} 
+          onClick={() => setMenuOpen(false)}  
+          spy={true} 
+          offset={-70}
+        >
           About Us
-          </Link>
-          
-          
-                  <Link className="links" to="#" smooth={true} duration={500} onClick={() => setMenuOpen(false)}  spy={true} offset={-70} >
-       Campaigns</Link>
-           <Link className="links" to="contact" smooth={true} duration={500} onClick={() => setMenuOpen(false)}  spy={true} offset={-70} >
-       Contact Us</Link>
-          <Link className="links" to="#" smooth={true} duration={500} onClick={() => setMenuOpen(false)}  spy={true} offset={-70} >
-       Donations</Link>
-      
-           <Link className="links" to="testimony" smooth={true} duration={500} onClick={() => setMenuOpen(false)}  spy={true} offset={-70} >
-       Testimony</Link>
-          <Link className="links" to="faq" smooth={true} duration={500} onClick={() => setMenuOpen(false)}  spy={true} offset={-70} >
-        FAQs</Link>
+        </ScrollLink>
+
+        {/* ✅ Campaigns now routes to the donation page */}
+        <RouterLink 
+          to="/donation" 
+          className="links" 
+          onClick={() => setMenuOpen(false)}
+        >
+          Campaigns
+        </RouterLink>
+
+        <ScrollLink 
+          className="links" 
+          to="contact" 
+          smooth={true} 
+          duration={500} 
+          onClick={() => setMenuOpen(false)}  
+          spy={true} 
+          offset={-70}
+        >
+          Contact Us
+        </ScrollLink>
+
+        {/* ✅ Donate Now - same route as Campaigns */}
+        <RouterLink 
+          to="/donation" 
+          className="links"
+          onClick={() => setMenuOpen(false)}
+        >
+          Donate Now
+        </RouterLink>
+
+        <ScrollLink 
+          className="links" 
+          to="testimony" 
+          smooth={true} 
+          duration={500} 
+          onClick={() => setMenuOpen(false)}  
+          spy={true} 
+          offset={-70}
+        >
+          Testimony
+        </ScrollLink>
+
+        <ScrollLink 
+          className="links" 
+          to="faq" 
+          smooth={true} 
+          duration={500} 
+          onClick={() => setMenuOpen(false)}  
+          spy={true} 
+          offset={-70}
+        >
+          FAQs
+        </ScrollLink>
       </nav>
     </header>
   );

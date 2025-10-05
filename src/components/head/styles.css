@@ -1,85 +1,283 @@
-/* Reset & Base */
-body {
+/* === CSS Reset & Variables === */
+:root {
+    --primary-color: #018a01;
+  --primary-dark : #016b01;
+  --primary-light: #e8f5e8;
+  --text-dark: #1a1a1a;
+  --text-light: #666;
+  --background: #fafafa;
+  --surface: #ffffff;
+  --border-radius: 8px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+}
+
+* {
   margin: 0;
   padding: 0;
-  font-family: Arial, sans-serif;
+  box-sizing: border-box;
 }
 
-/* Navbar */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--background);
+  color: var(--text-dark);
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/* === Enhanced Navbar === */
 .navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   display: flex;
-  
-  position:fixed;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  background-color: white;
-  border-radius: 10px;
-  box-shadow: 5px 5px 10px rgba(199, 198, 198, 0.7);
-  position: relative;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--surface);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: var(--transition);
 }
 
+.navbar.scrolled {
+  padding: var(--spacing-xs) var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+}
+
+/* === Logo === */
 .logo {
-  color: green;
+  color: var(  --primary-dark);
   font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-xs);
+  text-decoration: none;
+  transition: var(--transition);
+  padding: var(--spacing-xs) 0;
+  cursor: pointer;
 }
 
-/* Links */
+.logo:hover {
+  color: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.logo svg {
+  color: var(--primary-dark);
+  transition: var(--transition);
+}
+
+.logo:hover svg {
+  color: var(--primary-dark);
+  transform: scale(1.1);
+}
+
+/* === Navigation Links === */
 .nav-links {
   display: flex;
-  gap: 15px;
+  align-items: center;
+  gap: var(--spacing-xs);
+  transition: var(--transition);
 }
 
 .links {
-  color: green;
+  color: var(--text-dark);
   text-decoration: none;
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: all 0.3s ease-in-out;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+  position: relative;
+  white-space: nowrap;
   cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+.links::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: var(  --primary-dark);
+  border-radius: 2px;
+  transition: var(--transition);
 }
 
 .links:hover {
-  background-color: rgb(0, 117, 0);
-  color: white;
-  box-shadow: 5px 5px 10px rgba(199, 199, 199, 0.7);
+  color: var(  --primary-dark);
+  background: var(--primary-light);
 }
 
-/* Hamburger button (hidden by default) */
+.links:hover::before {
+  width: 70%;
+}
+
+.links.active {
+  color: var(  --primary-dark);
+  background: var(--primary-light);
+}
+
+.links.active::before {
+  width: 70%;
+}
+
+/* Active state for react-scroll spy */
+.links.active-scroll-spy {
+  color: var(  --primary-dark);
+  background: var(--primary-light);
+}
+
+.links.active-scroll-spy::before {
+  width: 70%;
+}
+
+/* === Hamburger Menu with React Icons === */
 .menu-toggle {
   display: none;
-  font-size: 1.5rem;
   background: none;
   border: none;
   cursor: pointer;
-  color: green;
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+  align-items: center;
+  color: var(  --primary-dark);
 }
 
-/* Responsive Styles */
+.menu-toggle:hover {
+  background: var(--primary-light);
+  transform: scale(1.05);
+}
+
+.menu-toggle svg {
+  font-size: 1.3rem;
+  transition: var(--transition);
+}
+
+.menu-toggle:hover svg {
+  color: var(--primary-dark);
+}
+
+/* === Enhanced Mobile Responsiveness === */
 @media (max-width: 768px) {
-  .menu-toggle {
-    display: block;
+  :root {
+    --spacing-lg: 1.25rem;
+  }
+
+  .navbar {
+    padding: var(--spacing-sm) var(--spacing-lg);
   }
 
   .nav-links {
-    display: none;
+    position: fixed;
+    top: 72px;
+    left: 0;
+    right: 0;
+    background: var(--surface);
     flex-direction: column;
-    gap: 10px;
-    position: absolute;
-    top: 60px;
-    right: 20px;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 5px 5px 10px rgba(199, 199, 199, 0.7);
-    padding: 15px;
-    width: 200px;
-    z-index: 10;
+    align-items: stretch;
+    padding: var(--spacing-md);
+    box-shadow: var(--shadow-md);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    transform: translateY(-10px);
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--transition);
+    z-index: 999;
   }
 
   .nav-links.open {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .links {
+    padding: var(--spacing-sm);
+    margin: 2px 0;
+    text-align: center;
+    border-radius: var(--border-radius);
+    width: 100%;
+  }
+
+  .links::before {
+    display: none;
+  }
+
+  .menu-toggle {
     display: flex;
+  }
+
+  /* Logo adjustment for mobile */
+  .logo {
+    font-size: 1.3rem;
+  }
+}
+
+/* === Professional Scrollbar === */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(  --primary-dark);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+/* === Focus States for Accessibility === */
+.links:focus-visible,
+.menu-toggle:focus-visible {
+  outline: 2px solid var(  --primary-dark);
+  outline-offset: 2px;
+}
+
+/* === Active Link Styles for Router Links === */
+a.links[class*="active"] {
+  color: var(  --primary-dark);
+  background: var(--primary-light);
+}
+
+/* === Reduced Motion Support === */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  html {
+    scroll-behavior: auto;
   }
 }

@@ -1,6 +1,9 @@
 import React from 'react';
 import './footer.css';
+import { useNavigate, Link as RouterLink } from "react-router-dom";
+ 
 import { FaInfoCircle, FaMailBulk, FaQuoteLeft, FaDonate } from 'react-icons/fa';
+import { Link as ScrollLink } from 'react-scroll';
 
 const Footer = () => {
   return (
@@ -9,24 +12,50 @@ const Footer = () => {
         <h3>Quick Links</h3>
         <ul>
           <li>
-            <a href="#about">
+            <ScrollLink
+              to="about"
+              smooth={true}
+              duration={600}
+              offset={-80}
+              spy={true}
+              activeClass="active"
+            >
               <FaInfoCircle /> About
-            </a>
+            </ScrollLink>
           </li>
           <li>
-            <a href="#contact">
+            <ScrollLink
+              to="contact"
+              smooth={true}
+              duration={600}
+              offset={-80}
+              spy={true}
+              activeClass="active"
+            >
               <FaMailBulk /> Contact
-            </a>
+            </ScrollLink>
           </li>
           <li>
-            <a href="#testimony">
+            <ScrollLink
+              to="testimony"
+              smooth={true}
+              duration={600}
+              offset={-80}
+              spy={true}
+              activeClass="active"
+            >
               <FaQuoteLeft /> Testimony
-            </a>
+            </ScrollLink>
           </li>
           <li>
-            <a href="#donation">
-              <FaDonate /> Start a Donation
-            </a>
+   <RouterLink 
+          to="/donation" 
+          className="links"
+          onClick={() => setMenuOpen(false)}
+        >
+          Donate Now
+        </RouterLink>
+
           </li>
         </ul>
       </div>
